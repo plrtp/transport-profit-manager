@@ -689,11 +689,31 @@ function renderCustomers(){
       <div class="customer-actions">
         <button onclick="editCustomer('${String(c.id).replace(/'/g,"\\'")}')">Edit</button>
         <button onclick="deleteCustomer('${String(c.id).replace(/'/g,"\\'")}')">Delete</button>
+        ${c.whatsapp ? `<button onclick="openCustomerWhatsApp('${String(c.id).replace(/'/g,"\\'")}')">WhatsApp</button>` : ''}
       </div>
     </div>
   `).join('');
 }
 document.addEventListener('DOMContentLoaded', renderCustomers);
+
+function openCustomerWhatsApp(id){
+  const list = JSON.parse(localStorage.getItem('tpjm_customers') || '[]');
+  const customer = list.find(c => String(c.id) === String(id));
+  if(!customer || !customer.whatsapp){
+    alert('This customer does not have a WhatsApp number saved.');
+    return;
+  }
+  let number = String(customer.whatsapp).trim().replace(/[^0-9+]/g,'');
+  if(number.indexOf('00') === 0) number = '+' + number.slice(2);
+  if(number.charAt(0) === '0') number = '+27' + number.slice(1);
+  number = number.replace(/[^0-9]/g,'');
+  if(number.length < 10){
+    alert('Please check the WhatsApp number saved for this customer.');
+    return;
+  }
+  const message = 'Hello ' + (customer.contactPerson || customer.name || '') + ', this is Piet & Andre Transport.';
+  window.open('https://wa.me/' + number + '?text=' + encodeURIComponent(message), '_blank');
+}
 </script>
 
 <script>/* Phase 2 Step 2 - Job records */
@@ -961,15 +981,6 @@ window.refreshDataManagement=dmRender;
 document.addEventListener('DOMContentLoaded',dmRender);
 dmRender();
 })();
-</script>
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("./sw.js").catch(function (error) {
-      console.log("Service worker registration failed:", error);
-    });
-  });
-}
 </script>
 </body>
 </html>
