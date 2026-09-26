@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transport Profit & Job Manager</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#17324d;color:white;padding:18px 20px}
+header h1{margin:0;font-size:22px}
+header p{margin:5px 0 0;opacity:.85}
+nav{display:flex;gap:8px;overflow:auto;padding:10px;background:white;border-bottom:1px solid #ddd}
+nav button{border:0;background:#eef2f5;padding:10px 14px;border-radius:8px;white-space:nowrap;cursor:pointer}
+nav button.active{background:#17324d;color:white}
+main{max-width:850px;margin:0 auto;padding:18px}
+.screen{display:none}
+.screen.active{display:block}
+.card{background:white;border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px #00000010}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+label{display:block;font-weight:bold;margin-bottom:6px}
+input,select{width:100%;padding:12px;border:1px solid #ccd3da;border-radius:8px;font-size:16px}
+button.primary{background:#19734a;color:white;border:0;border-radius:9px;padding:13px 18px;font-size:16px;cursor:pointer}
+button.secondary{background:#e9eef2;border:0;border-radius:9px;padding:11px 16px;cursor:pointer}
+.result{font-size:18px;line-height:1.7}
+.profit{font-size:34px;font-weight:bold}
+.good{background:#e7f6ed;border-left:6px solid #19734a}
+.warn{background:#fff4df;border-left:6px solid #d98b00}
+.bad{background:#fde8e8;border-left:6px solid #b42318}
+.stat{font-size:28px;font-weight:bold}
+.small{color:#667085;font-size:14px}
+table{width:100%;border-collapse:collapse}
+td,th{text-align:left;padding:10px;border-bottom:1px solid #eee}
+@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:12px}}
+
+/* Phase 2 Step 1 - Customers */
+.customer-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.customer-card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:18px}
+.customer-card h3{margin-top:0}
+.customer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.customer-grid .full{grid-column:1/-1}
+.customer-list{display:grid;gap:12px}
+.saved-customer{border:1px solid #ddd;border-radius:10px;padding:14px;background:#fafafa}
+.saved-customer h4{margin:0 0 7px}
+.saved-customer p{margin:4px 0}
+.customer-actions{display:flex;gap:8px;margin-top:10px}
+.customer-actions button{margin:0}
+@media(max-width:760px){
+  .customer-layout{grid-template-columns:1fr}
+  .customer-grid{grid-template-columns:1fr}
+  .customer-grid .full{grid-column:auto}
+}
+
+
+/* Phase 2 Step 2 - Jobs */
+.job-actions{display:flex;gap:8px;flex-wrap:wrap}
+.job-actions button{margin:0}
+.job-summary{font-size:18px;line-height:1.7}
+.job-summary .profit{font-size:32px}
+
+
+/* Phase 2 Step 4 - Quotes & Invoices */
+.full{grid-column:1/-1}
+.document-card{border:1px solid #ddd;border-radius:10px;padding:14px;margin-top:12px;background:#fafafa}
+.document-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.document-actions button{margin:0}
+@media(max-width:760px){.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header>
+<h1>Transport Profit & Job Manager</h1>
+<p>Know your costs. Know your profit. Make better transport decisions.</p>
+</header>
+
+<nav>
+<button class="active" onclick="show('dashboard',this)">Home</button>
+<button onclick="show('check',this)">Check Job</button>
+<button onclick="show('jobs',this)">Jobs</button>
+<button onclick="show('quotes',this)">Quotes & Invoices</button><button onclick="show('pod',this)">POD</button><button onclick="show('maintenance',this)">Maintenance</button><button onclick="show('reminders',this)">Reminders</button><button onclick="show('odometer',this)">Odometer</button><button onclick="show('licenseReminders',this)">License Reminders</button>
+<button onclick="show('profitReport',this)">Profit & Job Report</button><button onclick="show('fuelExpenseReport',this)">Fuel & Expense Report</button><button onclick="show('customers',this)">Customers</button><button onclick="show('vehiclePerformanceReport',this)">Vehicle Performance</button> <button onclick="show('customerReport',this)">Customer Report</button> <button onclick="show('dateRangeReport',this)">Date-Range Reports</button> <button onclick="show('backupRestore',this)">Backup & Restore</button> <button onclick="show('businessSettings',this)">Business Details & Settings</button> <button onclick="show('dataManagement',this)">Data Management</button>
+<button onclick="show('vehicles',this)">Vehicles</button>
+</nav>
+
+<main>
+<section id="dashboard" class="screen active"><div class="card"><h2>Dashboard</h2><p class="small">Summary of your saved transport jobs.</p><div class="grid"><div><div class="small">Jobs this month</div><div class="stat" id="jobCount">0</div></div><div><div class="small">Total revenue</div><div class="stat" id="dashboardRevenue">R0.00</div></div><div><div class="small">Total costs</div><div class="stat" id="dashboardCosts">R0.00</div></div><div><div class="small">Total profit</div><div class="stat" id="dashboardProfit">R0.00</div></div><div><div class="small">Average profit margin</div><div class="stat" id="dashboardMargin">0.0%</div></div><div><div class="small">GOOD JOB</div><div class="stat" id="dashboardGood">0</div></div><div><div class="small">LOW MARGIN</div><div class="stat" id="dashboardLow">0</div></div><div><div class="small">DON'T TAKE JOB</div><div class="stat" id="dashboardDont">0</div></div></div></div><div class="card"><h2>Ready to check a job?</h2><p>Enter the price, distance and costs before accepting a load.</p><button class="primary" onclick="show('check',document.querySelectorAll('nav button')[1])">CHECK A NEW JOB</button></div><div class="card"><h3>Recent Jobs</h3><div id="recent">No jobs saved yet.</div></div></section>
+
+<section id="check" class="screen">
+<div class="card">
+<h2>Check a New Job</h2>
+<p class="small">Calculate the estimated profit before you accept the work.</p>
+<div class="grid">
+<div><label>Price offered (R)</label><input id="price" type="number" value="4500"></div>
+<div><label>Total distance (km)</label><input id="distance" type="number" value="380"></div>
+<div><label>Vehicle</label><select id="vehicle" onchange="vehicleChanged()"></select></div>
+<div><label>Diesel price (R/litre)</label><input id="diesel" type="number" step="0.01" value="23"></div>
+<div><label>Tolls (R)</label><input id="tolls" type="number" value="420"></div>
+<div><label>Other job costs (R)</label><input id="other" type="number" value="300"></div>
+</div>
+<br>
+<button class="primary" onclick="calculate()">CALCULATE PROFIT</button>
+</div>
+<div id="calcResult"></div>
+</section>
+
+<section id="jobs" class="screen">
+<div class="card">
+<h2>Jobs</h2>
+<p class="small">Record a job and know your estimated profit before you accept it.</p>
+<div class="grid">
+<div><label>Customer *</label><select id="jobCustomer"><option value="">Select customer</option></select></div>
+<div><label>Job Date *</label><input id="jobDate" type="date"></div>
+<div><label>Job Reference</label><input id="jobReference" type="text" placeholder="Optional reference"></div>
+<div><label>Vehicle *</label><select id="jobVehicle"></select></div>
+<div><label>Pickup Location *</label><input id="jobPickup" type="text" placeholder="Pickup location"></div>
+<div><label>Delivery Location *</label><input id="jobDelivery" type="text" placeholder="Delivery location"></div>
+<div><label>Total Distance (km) *</label><input id="jobDistance" type="number" min="0" step="0.1" placeholder="0"></div>
+<div><label>Job Price (R) *</label><input id="jobPrice" type="number" min="0" step="0.01" placeholder="0"></div>
+<div><label>Diesel Price (R/litre) *</label><input id="jobDiesel" type="number" min="0" step="0.01" placeholder="0"></div>
+<div><label>Tolls (R)</label><input id="jobTolls" type="number" min="0" step="0.01" value="0"></div>
+<div><label>Other Job Costs (R)</label><input id="jobOther" type="number" min="0" step="0.01" value="0"></div>
+</div>
+<br><button class="primary" onclick="saveManagedJob()">SAVE JOB</button> <button class="secondary" onclick="clearManagedJobForm()">CLEAR</button>
+</div>
+<div id="managedJobResult"></div>
+<div class="card"><h3>Saved Jobs</h3><div id="managedJobsList">No jobs saved yet.</div></div><div class="card" style="border:1px solid #ddd"><h3>One-Time Job Data Transfer</h3><p class="small">Use this once to move saved jobs from the older Jobs file into this master app. It does not delete or change the original jobs.</p><input id="jobTransferFile" type="file" accept=".json,application/json"><br><br><button class="secondary" onclick="importJobsForTransfer()">IMPORT SAVED JOBS</button><div id="jobTransferStatus" class="small" style="margin-top:10px"></div></div>
+</section>
+
+<section id="profitReport" class="screen">
+<div class="card">
+<h2>Profit &amp; Job Report</h2>
+<p class="small">Detailed report of your saved transport jobs.</p>
+<div class="grid">
+<div><label>From Date<input id="reportFrom" type="date"></label></div>
+<div><label>To Date<input id="reportTo" type="date"></label></div>
+</div>
+<br><div class="button-row"><button class="primary" onclick="generateProfitJobReport()">GENERATE REPORT</button><button class="secondary" onclick="clearProfitJobReport()">CLEAR DATES</button><button onclick="printProfitJobReport()">PRINT REPORT</button></div>
+</div>
+<div id="profitJobReportResult"></div>
+</section>
+
+<section id="fuelExpenseReport" class="screen">
+<div class="card">
+<h2>Fuel &amp; Expense Report</h2>
+<p class="small">Fuel and job expense summary from your saved transport jobs.</p>
+<div class="grid">
+<div><label>From Date<input id="fuelReportFrom" type="date"></label></div>
+<div><label>To Date<input id="fuelReportTo" type="date"></label></div>
+</div>
+<br><div class="button-row"><button class="primary" onclick="generateFuelExpenseReport()">GENERATE REPORT</button><button class="secondary" onclick="clearFuelExpenseReport()">CLEAR DATES</button><button onclick="printFuelExpenseReport()">PRINT REPORT</button></div>
+</div>
+<div id="fuelExpenseReportResult"></div>
+</section>
+
+<section id="vehiclePerformanceReport" class="screen">
+<div class="card">
+<h2>Vehicle Performance</h2>
+<p class="small">See how each vehicle is performing from your saved transport jobs.</p>
+<div class="grid">
+<div><label>From Date<input id="vehiclePerfFrom" type="date"></label></div>
+<div><label>To Date<input id="vehiclePerfTo" type="date"></label></div>
+</div>
+<br><div class="button-row"><button class="primary" onclick="generateVehiclePerformanceReport()">GENERATE REPORT</button><button class="secondary" onclick="clearVehiclePerformanceReport()">CLEAR DATES</button><button onclick="printVehiclePerformanceReport()">PRINT REPORT</button></div>
+</div>
+<div id="vehiclePerformanceReportResult"></div>
+</section>
+
+<section id="pod" class="screen">
+<div class="card"><h2>Proof of Delivery (POD)</h2><p>Record a completed delivery and keep the proof with the job.</p>
+<div class="grid">
+<label>Job *<select id="podJob" onchange="loadPODJob()"><option value="">Select a saved job</option></select><div id="podJobDetails" class="small" style="margin-top:8px"></div></label>
+<label>POD Date *<input id="podDate" type="date"></label>
+<label>Received By<input id="podReceivedBy" type="text" placeholder="Name of person receiving delivery"></label>
+<label>Received At<input id="podReceivedAt" type="text" placeholder="Business / delivery location"></label>
+<label>Delivery Status<select id="podStatus"><option>Delivered</option><option>Partially Delivered</option><option>Delivery Refused</option><option>Delivery Attempted</option></select></label>
+<label>Condition<select id="podCondition"><option>Good condition</option><option>Damaged</option><option>Short delivery</option><option>Other</option></select></label>
+<label class="full">Notes / Exceptions<textarea id="podNotes" rows="4" placeholder="Record shortages, damage, refusals or other delivery notes"></textarea></label>
+</div>
+<div class="button-row"><button onclick="savePOD()">SAVE POD</button><button class="secondary" onclick="clearPODForm()">CLEAR</button></div>
+</div>
+<div class="card"><h3>Saved POD Records</h3><div id="podList">No POD records saved yet.</div></div>
+</section>
+<section id="quotes" class="screen">
+<div class="card">
+<h2>Quotes & Invoices</h2>
+<p class="small">Create a quote or invoice using your saved customers and jobs. VAT is calculated automatically when enabled.</p>
+
+<h3>Business & VAT Details</h3>
+<div class="grid">
+<div><label>Business Name</label><input id="bizName" type="text" value="Piet & Andre Transport"></div>
+<div><label>Telephone / WhatsApp</label><input id="bizPhone" type="text" value="0681239898"></div>
+<div><label>VAT Registered?</label><select id="vatRegistered" onchange="updateVatFields()"><option value="no">No</option><option value="yes">Yes</option></select></div>
+<div><label>VAT Registration Number</label><input id="vatNumber" type="text" placeholder="N/A"></div>
+<div><label>VAT Percentage</label><input id="vatRate" type="number" min="0" step="0.01" value="0"></div>
+</div>
+<br><button class="primary" onclick="saveBusinessDetails()">SAVE BUSINESS DETAILS</button>
+</div>
+
+<div class="card">
+<h3>Create Quote</h3>
+<div class="grid">
+<div><label>Customer *</label><select id="quoteCustomer"><option value="">Select customer</option></select></div>
+<div><label>Quote Date *</label><input id="quoteDate" type="date"></div>
+<div><label>Valid Until</label><input id="quoteValid" type="date"></div>
+<div><label>Quote Reference</label><input id="quoteReference" type="text" placeholder="Optional reference"></div>
+<div><label>Pickup Location</label><input id="quotePickup" type="text"></div>
+<div><label>Delivery Location</label><input id="quoteDelivery" type="text"></div>
+<div class="full"><label>Description of Service</label><input id="quoteDescription" type="text" placeholder="Transport service"></div>
+<div><label>Amount Before VAT (R) *</label><input id="quoteAmount" type="number" min="0" step="0.01" placeholder="0.00" oninput="calculateDocument('quote')"></div>
+</div>
+<div id="quoteCalculation" class="job-summary" style="margin-top:14px"></div>
+<br><button class="primary" onclick="saveQuote()">SAVE QUOTE</button> <button onclick="clearQuoteForm()">CLEAR</button>
+</div>
+<div class="card"><h3>Saved Quotes</h3><div id="quoteList">No quotes saved yet.</div></div>
+
+<div class="card">
+<h3>Create Invoice</h3>
+<p class="small">You can create an invoice directly or use a saved quote.</p>
+<div class="grid">
+<div><label>Customer *</label><select id="invoiceCustomer"><option value="">Select customer</option></select></div>
+<div><label>Invoice Date *</label><input id="invoiceDate" type="date"></div>
+<div><label>Due Date</label><input id="invoiceDue" type="date"></div>
+<div><label>Invoice Reference</label><input id="invoiceReference" type="text" placeholder="Optional reference"></div>
+<div><label>Pickup Location</label><input id="invoicePickup" type="text"></div>
+<div><label>Delivery Location</label><input id="invoiceDelivery" type="text"></div>
+<div class="full"><label>Description of Service</label><input id="invoiceDescription" type="text" placeholder="Transport service"></div>
+<div><label>Amount Before VAT (R) *</label><input id="invoiceAmount" type="number" min="0" step="0.01" placeholder="0.00" oninput="calculateDocument('invoice')"></div>
+</div>
+<div id="invoiceCalculation" class="job-summary" style="margin-top:14px"></div>
+<br><button class="primary" onclick="saveInvoice()">SAVE INVOICE</button> <button onclick="clearInvoiceForm()">CLEAR</button>
+</div>
+<div class="card"><h3>Saved Invoices</h3><div id="invoiceList">No invoices saved yet.</div></div>
+</section>
+
+<section id="reminders" class="screen">
+<div class="card">
+<h2>Maintenance Reminders</h2>
+<p class="small">Review maintenance items that are overdue or due soon.</p>
+<div class="grid">
+<div><label>Remind me when service is due within (days)</label><input id="reminderDays" type="number" min="0" value="30"></div>
+<div><label>Remind me when service is due within (km)</label><input id="reminderKm" type="number" min="0" value="1000"></div>
+</div>
+<div style="margin-top:12px"><button onclick="saveReminderSettings()">SAVE REMINDER SETTINGS</button></div>
+</div>
+<div class="card">
+<h3>Current Reminders</h3>
+<div id="reminderList">No reminders.</div>
+</div>
+</section>
+
+<section id="customers" class="screen">
+<div class="card"><h2>Customers</h2>
+
+<div class="customer-layout">
+  <div class="customer-card">
+    <h3>Add / Edit Customer</h3>
+    <div class="customer-grid">
+      <div class="full">
+        <label for="customerName">Customer Name *</label>
+        <input id="customerName" type="text" placeholder="Business or customer name">
+      </div>
+      <div>
+        <label for="contactPerson">Contact Person</label>
+        <input id="contactPerson" type="text" placeholder="Contact person">
+      </div>
+      <div>
+        <label for="customerTelephone">Telephone</label>
+        <input id="customerTelephone" type="tel" placeholder="Telephone number">
+      </div>
+      <div>
+        <label for="customerWhatsApp">WhatsApp</label>
+        <input id="customerWhatsApp" type="tel" placeholder="WhatsApp number">
+      </div>
+      <div>
+        <label for="customerEmail">Email</label>
+        <input id="customerEmail" type="email" placeholder="Email address">
+      </div>
+      <div class="full">
+        <label for="customerAddress">Address</label>
+        <textarea id="customerAddress" rows="2" placeholder="Customer address"></textarea>
+      </div>
+      <div class="full">
+        <label for="customerNotes">Notes</label>
+        <textarea id="customerNotes" rows="3" placeholder="Notes"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="primary" onclick="saveCustomer()">Add Customer</button>
+      <button type="button" onclick="clearCustomerForm()">Clear</button>
+    </div>
+  </div>
+
+  <div class="customer-card">
+    <h3>Saved Customer List</h3>
+    <div id="customerList" class="customer-list"></div>
+  </div>
+</div>
+
+</div>
+</div>
+</section>
+
+<section id="customerReport" class="screen">
+<div class="card"><h2>Customer Report</h2>
+<p class="small">See jobs, revenue, costs and profit for each customer from your saved transport jobs.</p>
+<div class="grid">
+<div><label>From Date<input id="customerReportFrom" type="date"></label></div>
+<div><label>To Date<input id="customerReportTo" type="date"></label></div>
+</div>
+<br><div class="button-row"><button class="primary" onclick="generateCustomerReport()">GENERATE REPORT</button><button class="secondary" onclick="clearCustomerReport()">CLEAR DATES</button><button onclick="printCustomerReport()">PRINT REPORT</button></div>
+</div>
+<div id="customerReportResult"></div>
+</section>
+
+<section id="dateRangeReport" class="screen">
+<div class="card"><h2>Date-Range Reports</h2>
+<p class="small">Generate one combined report for any selected date range from your saved transport jobs.</p>
+<div class="grid">
+<div><label>From Date<input id="dateRangeFrom" type="date"></label></div>
+<div><label>To Date<input id="dateRangeTo" type="date"></label></div>
+</div>
+<br><div class="button-row"><button class="primary" onclick="generateDateRangeReport()">GENERATE REPORT</button><button class="secondary" onclick="clearDateRangeReport()">CLEAR DATES</button><button onclick="printDateRangeReport()">PRINT REPORT</button></div>
+</div>
+<div id="dateRangeReportResult"></div>
+</section>
+
+<section id="vehicles" class="screen">
+<div class="card"><h2>Vehicles</h2>
+<p class="small">Add your vehicles here. Legal load is calculated automatically from GVM minus tare.</p>
+<button class="primary" onclick="showVehicleForm()">+ ADD VEHICLE</button>
+<div id="vehicleForm" style="display:none;margin-top:16px">
+<div class="grid">
+<div><label>Registration number</label><input id="vReg" placeholder="e.g. ABC 123 FS"></div>
+<div><label>Make</label><input id="vMake" placeholder="e.g. Ford"></div>
+<div><label>Model</label><input id="vModel" placeholder="e.g. Ranger 2.2"></div>
+<div><label>Year</label><input id="vYear" type="number" min="1900" max="2100"></div>
+<div><label>Transmission</label><select id="vTransmission"><option>Manual</option><option>Automatic</option></select></div>
+<div><label>Fuel type</label><select id="vFuel"><option>Diesel</option><option>Petrol</option></select></div>
+<div><label>Fuel consumption (L/100 km)</label><input id="vConsumption" type="number" min="0" step="0.1"></div>
+<div><label>Tare (kg)</label><input id="vTare" type="number" min="0"></div>
+<div><label>GVM (kg)</label><input id="vGvm" type="number" min="0"></div>
+<div><label>Legal load (kg)</label><input id="vLegalLoad" type="number" readonly></div>
+<div><label>Current odometer (km)</label><input id="vOdo" type="number" min="0"></div>
+<div><label>License renewal date</label><input id="vLicense" type="date"></div>
+</div>
+<div style="margin-top:12px"><button class="primary" onclick="saveVehicle()">SAVE VEHICLE</button> <button onclick="hideVehicleForm()">CANCEL</button></div>
+</div>
+</div>
+<div class="card"><h3>Saved vehicles</h3><div id="vehicleList"></div></div>
+</section>
+
+<section id="maintenance" class="screen">
+<div class="card">
+<h2>Vehicle Maintenance</h2>
+<p class="small">Record maintenance work, costs and the next service due for your vehicles.</p>
+<div class="grid">
+<div><label>Vehicle *<select id="maintVehicle"><option value="">Select vehicle</option></select></label></div>
+<div><label>Service Date *<input id="maintDate" type="date"></label></div>
+<div><label>Odometer (km) *<input id="maintOdometer" type="number" min="0" step="1" placeholder="Current odometer"></label></div>
+<div><label>Maintenance Type *<select id="maintType"><option>Service</option><option>Oil Change</option><option>Tires</option><option>Brakes</option><option>Repairs</option><option>Other</option></select></label></div>
+<div class="full"><label>Description *<input id="maintDescription" type="text" placeholder="What maintenance was done?"></label></div>
+<div><label>Cost (R) *<input id="maintCost" type="number" min="0" step="0.01" placeholder="0.00"></label></div>
+<div><label>Next Service Due (km)<input id="maintNextKm" type="number" min="0" step="1" placeholder="Optional"></label></div>
+<div><label>Next Service Date<input id="maintNextDate" type="date"></label></div>
+<div class="full"><label>Notes<textarea id="maintNotes" rows="4" placeholder="Optional notes"></textarea></label></div>
+</div>
+<div class="button-row"><button class="primary" onclick="saveMaintenance()">SAVE MAINTENANCE</button><button class="secondary" onclick="clearMaintenanceForm()">CLEAR</button></div>
+</div>
+<div class="card"><h3>Saved Maintenance Records</h3><div id="maintenanceList">No maintenance records saved yet.</div></div>
+</section>
+
+<section id="odometer" class="screen">
+<div class="card">
+<h2>Odometer Tracking</h2>
+<p class="small">Update the current odometer reading for each vehicle. This reading is used by maintenance reminders based on kilometers.</p>
+<div class="grid">
+<div><label>Vehicle *<select id="odoVehicle"><option value="">Select vehicle</option></select></label></div>
+<div><label>Current Odometer (km) *<input id="odoReading" type="number" min="0" step="1" placeholder="Enter current km"></label></div>
+</div>
+<div class="button-row"><button class="primary" onclick="saveOdometerUpdate()">SAVE ODOMETER</button><button class="secondary" onclick="clearOdometerForm()">CLEAR</button></div>
+</div>
+<div class="card"><h3>Current Vehicle Odometers</h3><div id="odometerList">No vehicles found.</div></div>
+</section>
+
+<section id="licenseReminders" class="screen">
+<div class="card">
+<h2>Vehicle License Renewal Reminders</h2>
+<p class="small">Review vehicle license renewal dates and see which licenses are current, due soon, or overdue.</p>
+<div class="grid">
+<div><label>Reminder window (days)<input id="licenseReminderDays" type="number" min="0" step="1" value="30"></label></div>
+</div>
+<div class="button-row"><button class="primary" onclick="saveLicenseReminderSettings()">SAVE REMINDER SETTINGS</button></div>
+</div>
+<div class="card"><h3>License Status</h3><div id="licenseReminderList">No vehicles found.</div></div>
+</section>
+
+<section id="businessSettings" class="screen">
+<div class="card">
+<h2>Business Details & Settings</h2>
+<p class="small">Set the business information used by the app. These details are saved locally on this device.</p>
+<div class="grid">
+<div><label>Business Name</label><input id="settingsBizName" type="text"></div>
+<div><label>Telephone / WhatsApp</label><input id="settingsBizPhone" type="text"></div>
+<div><label>Business Address</label><input id="settingsBizAddress" type="text" placeholder="Street, town, province"></div>
+<div><label>VAT Registered?</label><select id="settingsVatRegistered"><option value="no">No</option><option value="yes">Yes</option></select></div>
+<div><label>VAT Registration Number</label><input id="settingsVatNumber" type="text" placeholder="N/A"></div>
+<div><label>VAT Percentage</label><input id="settingsVatRate" type="number" min="0" step="0.01" value="0"></div>
+</div>
+<br><button class="primary" onclick="saveBusinessSettings()">SAVE BUSINESS DETAILS</button>
+<div id="businessSettingsStatus" class="small" style="margin-top:10px"></div>
+</div>
+</section>
+<section id="backupRestore" class="screen">
+<div class="card">
+<h2>Backup & Restore</h2>
+<p class="small">Create a backup of your saved transport app data, or restore data from a backup file.</p>
+<div class="card" style="margin-top:15px">
+<h3>1. Create Backup</h3>
+<p class="small">Download a complete backup of your customers, jobs, vehicles, quotes, invoices, PODs, maintenance records and reminder settings.</p>
+<button class="primary" onclick="createTPJMBackup()">DOWNLOAD BACKUP</button>
+<div id="backupStatus" class="small" style="margin-top:10px"></div>
+</div>
+<div class="card" style="margin-top:15px">
+<h3>2. Restore Backup</h3>
+<p class="small">Choose a backup file previously created by this app. Restoring will replace the current saved app data with the data in the backup.</p>
+<input type="file" id="backupFile" accept=".json,application/json" onchange="restoreTPJMBackup(event)">
+<div id="restoreStatus" class="small" style="margin-top:10px"></div>
+</div>
+<div class="card" style="margin-top:15px">
+<h3>Important</h3>
+<p class="small">Keep your backup file somewhere safe. A backup is especially useful if browser data is cleared or the computer is changed.</p>
+</div>
+</div>
+</section>
+
+<section id="dataManagement" class="screen">
+<div class="card">
+<h2>Data Management</h2>
+<p class="small">View your saved records and safely manage stored app data.</p>
+<div id="dataManagementCounts" class="grid" style="margin-top:15px"></div>
+</div>
+<div class="card" style="margin-top:15px">
+<h3>Safe Data Deletion</h3>
+<p class="small">These actions permanently delete the selected type of data from this browser. Your backup files are not affected.</p>
+<div class="grid">
+<button class="danger" type="button" onclick="dmDeleteType('tpjm_customers','Customers')">DELETE CUSTOMERS</button>
+<button class="danger" type="button" onclick="dmDeleteType('tpjm_jobs','Jobs')">DELETE JOBS</button>
+<button class="danger" type="button" onclick="dmDeleteType('tpjm_quotes','Quotes')">DELETE QUOTES</button>
+<button class="danger" type="button" onclick="dmDeleteType('tpjm_invoices','Invoices')">DELETE INVOICES</button>
+<button class="danger" type="button" onclick="dmDeleteType('tpjm_pods','POD Records')">DELETE POD RECORDS</button>
+<button class="danger" type="button" onclick="dmDeleteType('tpjm_maintenance','Maintenance Records')">DELETE MAINTENANCE</button>
+</div>
+</div>
+<div class="card" style="margin-top:15px">
+<h3>Reset All App Data</h3>
+<p class="small"><b>Warning:</b> This permanently removes the app data stored in this browser. Download a backup first if you may need the data later.</p>
+<button class="danger" type="button" onclick="dmResetAll()">RESET ALL APP DATA</button>
+</div>
+</section>
+</main>
+
+<script>
+let lastCalculation=null;
+function money(n){return 'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function show(id,btn){
+document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+if(btn)btn.classList.add('active');
+if(id==='dashboard' && typeof renderDashboardSummary==='function')renderDashboardSummary();
+if(id==='jobs' && typeof renderManagedJobs==='function')renderManagedJobs();
+}
+function getVehicles(){
+let vehicles=JSON.parse(localStorage.getItem('tpjm_vehicles')||'null');
+if(!vehicles){vehicles=[{id:'v1',reg:'',make:'Ford',model:'Ranger 2.2 Diesel',year:2016,transmission:'Manual',fuel:'Diesel',consumption:9.0,tare:1866,gvm:3200,legalLoad:1334,odo:0,license:''}];localStorage.setItem('tpjm_vehicles',JSON.stringify(vehicles));}
+return vehicles;
+}
+function saveVehicles(v){localStorage.setItem('tpjm_vehicles',JSON.stringify(v));}
+function showVehicleForm(editId){
+const f=document.getElementById('vehicleForm'); f.style.display='block'; f.dataset.editId=editId||'';
+if(editId){const v=getVehicles().find(x=>x.id===editId); if(!v)return;
+['Reg','Make','Model','Year','Consumption','Tare','Gvm','Odo','License'].forEach(k=>{const el=document.getElementById('v'+k); if(el)el.value=v[k.toLowerCase()==='gvm'?'gvm':k.toLowerCase()==='odo'?'odo':k.toLowerCase()==='license'?'license':k.toLowerCase()]||'';});
+document.getElementById('vTransmission').value=v.transmission||'Manual';document.getElementById('vFuel').value=v.fuel||'Diesel';
+}else{document.querySelectorAll('#vehicleForm input').forEach(x=>x.value='');document.getElementById('vTransmission').value='Manual';document.getElementById('vFuel').value='Diesel';}
+updateLegalLoad();
+}
+function hideVehicleForm(){document.getElementById('vehicleForm').style.display='none';}
+function updateLegalLoad(){const g=+document.getElementById('vGvm').value||0,t=+document.getElementById('vTare').value||0;document.getElementById('vLegalLoad').value=(g>0&&t>=0)?Math.max(0,g-t):'';}
+function saveVehicle(){
+const make=document.getElementById('vMake').value.trim(),model=document.getElementById('vModel').value.trim();
+if(!make||!model){alert('Please enter the vehicle make and model.');return;}
+const v={id:document.getElementById('vehicleForm').dataset.editId||'v-'+Date.now(),reg:document.getElementById('vReg').value.trim(),make,model,year:+document.getElementById('vYear').value||'',transmission:document.getElementById('vTransmission').value,fuel:document.getElementById('vFuel').value,consumption:+document.getElementById('vConsumption').value||0,tare:+document.getElementById('vTare').value||0,gvm:+document.getElementById('vGvm').value||0,legalLoad:+document.getElementById('vLegalLoad').value||0,odo:+document.getElementById('vOdo').value||0,license:document.getElementById('vLicense').value||''};
+let vs=getVehicles(),i=vs.findIndex(x=>x.id===v.id);if(i>=0)vs[i]=v;else vs.push(v);saveVehicles(vs);hideVehicleForm();renderVehicles();refreshVehicleSelect();alert('Vehicle saved successfully.');
+}
+function editVehicle(id){showVehicleForm(id);show('vehicles');}
+function deleteVehicle(id){if(!confirm('Delete this vehicle?'))return;let vs=getVehicles().filter(v=>v.id!==id);if(!vs.length){alert('At least one vehicle must remain.');return;}saveVehicles(vs);renderVehicles();refreshVehicleSelect();}
+function renderVehicles(){
+const vs=getVehicles();
+if(!vs.length){document.getElementById('vehicleList').innerHTML='No vehicles saved yet.';return;}
+document.getElementById('vehicleList').innerHTML=vs.map(v=>`<div class="card" style="margin-top:12px"><h3>${v.make} ${v.model}</h3><div class="small">${v.reg||'No registration'} • ${v.year||'Year not set'} • ${v.transmission||'Transmission not set'} • ${v.fuel}</div><p><b>Consumption:</b> ${v.consumption||0} L/100 km &nbsp; <b>Tare:</b> ${v.tare||0} kg &nbsp; <b>GVM:</b> ${v.gvm||0} kg &nbsp; <b>Legal load:</b> ${v.legalLoad||0} kg &nbsp; <b>Odometer:</b> ${v.odo||0} km</p><p><b>License renewal:</b> ${v.license?new Date(v.license+'T00:00:00').toLocaleDateString('en-ZA'):'Not set'}</p><button onclick="editVehicle('${v.id}')">EDIT</button> <button onclick="deleteVehicle('${v.id}')">DELETE</button></div>`).join('');
+}
+function refreshVehicleSelect(){
+const sel=document.getElementById('vehicle'),vs=getVehicles(),old=sel.dataset.vehicleId||vs[0].id;sel.innerHTML=vs.map(v=>`<option value="${v.consumption}" data-id="${v.id}">${v.make} ${v.model}${v.reg?' — '+v.reg:''} — ${v.consumption} L/100 km</option>`).join('');const chosen=vs.find(v=>v.id===old)||vs[0];sel.value=chosen.consumption;sel.dataset.vehicleId=chosen.id;
+}
+function vehicleChanged(){const sel=document.getElementById('vehicle');const opt=sel.options[sel.selectedIndex];if(opt)sel.dataset.vehicleId=opt.dataset.id;}
+function calculate(){
+const price=+document.getElementById('price').value||0;
+const distance=+document.getElementById('distance').value||0;
+const consumption=+document.getElementById('vehicle').value||0;
+const vehicleId=document.getElementById('vehicle').dataset.vehicleId||'v1';
+const diesel=+document.getElementById('diesel').value||0;
+const tolls=+document.getElementById('tolls').value||0;
+const other=+document.getElementById('other').value||0;
+const litres=distance/100*consumption;
+const fuel=litres*diesel;
+const cost=fuel+tolls+other;
+const profit=price-cost;
+const margin=price?profit/price*100:0;
+let cls=profit<0?'bad':margin<20?'warn':'good';
+let verdict=profit<0?'🔴 DON’T TAKE THIS JOB':margin<20?'🟠 LOW MARGIN':'🟢 GOOD JOB';
+lastCalculation={price,distance,fuel,tolls,other,cost,profit,margin,vehicleId};
+document.getElementById('calcResult').innerHTML=`
+<div class="card ${cls}">
+<h2>${verdict}</h2>
+<div class="result">
+Price offered: <b>${money(price)}</b><br>
+Fuel required: <b>${litres.toFixed(1)} L</b><br>
+Fuel cost: <b>${money(fuel)}</b><br>
+Tolls: <b>${money(tolls)}</b><br>
+Other costs: <b>${money(other)}</b><br>
+Estimated total cost: <b>${money(cost)}</b><br>
+Estimated profit: <div class="profit">${money(profit)}</div>
+Profit margin: <b>${margin.toFixed(1)}%</b>
+</div>
+<br>
+${profit>=0?'<button class="primary" onclick="saveJob()">ACCEPT & SAVE JOB</button>':''}
+</div>`;
+}
+function saveJob(){
+if(!lastCalculation)return;
+let jobs=JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');
+jobs.unshift({...lastCalculation,id:'JOB-'+String(Date.now()).slice(-6),date:new Date().toLocaleDateString('en-ZA')});
+localStorage.setItem('tpjm_jobs',JSON.stringify(jobs));
+renderVehicles();
+refreshVehicleSelect();
+document.getElementById('vGvm')?.addEventListener('input',updateLegalLoad);document.getElementById('vTare')?.addEventListener('input',updateLegalLoad);
+renderJobs();
+alert('Job saved successfully.');
+}
+function renderJobs(){
+let jobs=JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');
+document.getElementById('jobCount').textContent=jobs.length;
+document.getElementById('revenue').textContent=money(jobs.reduce((a,j)=>a+j.price,0));
+if(!jobs.length){document.getElementById('recent').innerHTML='No jobs saved yet.';const oldJobsList=document.getElementById('jobsList'); if(oldJobsList) oldJobsList.innerHTML='No jobs saved yet.';return;}
+let rows=jobs.map(j=>`<tr><td>${j.id}</td><td>${j.date}</td><td>${money(j.price)}</td><td>${money(j.profit)}</td></tr>`).join('');
+const oldJobsList=document.getElementById('jobsList'); if(oldJobsList) oldJobsList.innerHTML=`<table><tr><th>Job</th><th>Date</th><th>Price</th><th>Profit</th></tr>${rows}</table>`;
+document.getElementById('recent').innerHTML=`<table><tr><th>Job</th><th>Price</th><th>Profit</th></tr>${jobs.slice(0,5).map(j=>`<tr><td>${j.id}</td><td>${money(j.price)}</td><td>${money(j.profit)}</td></tr>`).join('')}</table>`;
+}
+renderVehicles();
+refreshVehicleSelect();
+document.getElementById('vGvm')?.addEventListener('input',updateLegalLoad);document.getElementById('vTare')?.addEventListener('input',updateLegalLoad);
+renderJobs();
+
+/* Phase 2 Step 4 - Quotes & Invoices */
+function docMoney(n){return money(Number(n)||0)}
+function getBusinessDetails(){return JSON.parse(localStorage.getItem('tpjm_business')||'null')||{name:'Piet & Andre Transport',phone:'0681239898',vatRegistered:'no',vatNumber:'N/A',vatRate:0};}
+function saveBusinessDetails(){const d={name:document.getElementById('bizName').value.trim()||'Piet & Andre Transport',phone:document.getElementById('bizPhone').value.trim()||'',vatRegistered:document.getElementById('vatRegistered').value,vatNumber:document.getElementById('vatNumber').value.trim()||'N/A',vatRate:Number(document.getElementById('vatRate').value)||0};localStorage.setItem('tpjm_business',JSON.stringify(d));updateVatFields();calculateDocument('quote');calculateDocument('invoice');alert('Business details saved successfully.');}
+function loadBusinessDetails(){const d=getBusinessDetails();document.getElementById('bizName').value=d.name||'';document.getElementById('bizPhone').value=d.phone||'';document.getElementById('vatRegistered').value=d.vatRegistered||'no';document.getElementById('vatNumber').value=d.vatNumber||'N/A';document.getElementById('vatRate').value=Number(d.vatRate)||0;updateVatFields();}
+function updateVatFields(){const yes=document.getElementById('vatRegistered').value==='yes';document.getElementById('vatNumber').disabled=!yes;document.getElementById('vatRate').disabled=!yes;if(!yes){document.getElementById('vatNumber').value='N/A';document.getElementById('vatRate').value=0;}calculateDocument('quote');calculateDocument('invoice');}
+function documentVat(){const d=getBusinessDetails();return d.vatRegistered==='yes'?Number(d.vatRate)||0:0;}
+function calculateDocument(type){const amount=Number(document.getElementById(type+'Amount').value)||0;const rate=documentVat();const vat=amount*rate/100;const total=amount+vat;document.getElementById(type+'Calculation').innerHTML='<b>Amount before VAT:</b> '+docMoney(amount)+' &nbsp; <b>VAT:</b> '+docMoney(vat)+' &nbsp; <b>Total:</b> '+docMoney(total);return {amount,vat,total,rate};}
+function getCustomersForDocs(){return JSON.parse(localStorage.getItem('tpjm_customers')||'[]');}
+function refreshDocumentCustomerSelects(){const cs=getCustomersForDocs();['quoteCustomer','invoiceCustomer'].forEach(id=>{const sel=document.getElementById(id);if(!sel)return;const old=sel.value;sel.innerHTML='<option value="">Select customer</option>'+cs.map(c=>'<option value="'+escJob(c.id)+'">'+escJob(c.name)+'</option>').join('');if(cs.some(c=>c.id===old))sel.value=old;});}
+function getQuotes(){return JSON.parse(localStorage.getItem('tpjm_quotes')||'[]');}
+function saveQuotes(a){localStorage.setItem('tpjm_quotes',JSON.stringify(a));}
+function getInvoices(){return JSON.parse(localStorage.getItem('tpjm_invoices')||'[]');}
+function saveInvoices(a){localStorage.setItem('tpjm_invoices',JSON.stringify(a));}
+function saveQuote(){const customerId=document.getElementById('quoteCustomer').value,date=document.getElementById('quoteDate').value,amount=Number(document.getElementById('quoteAmount').value)||0;if(!customerId||!date||amount<0){alert('Please select a customer, enter the quote date and enter an amount.');return;}const c=getCustomersForDocs().find(x=>x.id===customerId);const calc=calculateDocument('quote');const q={id:'q-'+Date.now(),number:'Q-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-6),customerId,customerName:c?c.name:'',date,validUntil:document.getElementById('quoteValid').value,reference:document.getElementById('quoteReference').value.trim(),pickup:document.getElementById('quotePickup').value.trim(),delivery:document.getElementById('quoteDelivery').value.trim(),description:document.getElementById('quoteDescription').value.trim(),amount:calc.amount,vat:calc.vat,total:calc.total,vatRate:calc.rate};const a=getQuotes();a.push(q);saveQuotes(a);renderQuotes();clearQuoteForm();alert('Quote saved successfully.');}
+function saveInvoice(){const customerId=document.getElementById('invoiceCustomer').value,date=document.getElementById('invoiceDate').value,amount=Number(document.getElementById('invoiceAmount').value)||0;if(!customerId||!date||amount<0){alert('Please select a customer, enter the invoice date and enter an amount.');return;}const c=getCustomersForDocs().find(x=>x.id===customerId);const calc=calculateDocument('invoice');const inv={id:'i-'+Date.now(),number:'INV-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-6),customerId,customerName:c?c.name:'',date,dueDate:document.getElementById('invoiceDue').value,reference:document.getElementById('invoiceReference').value.trim(),pickup:document.getElementById('invoicePickup').value.trim(),delivery:document.getElementById('invoiceDelivery').value.trim(),description:document.getElementById('invoiceDescription').value.trim(),amount:calc.amount,vat:calc.vat,total:calc.total,vatRate:calc.rate,status:'Unpaid'};const a=getInvoices();a.push(inv);saveInvoices(a);renderInvoices();clearInvoiceForm();alert('Invoice saved successfully.');}
+function escDoc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function renderQuotes(){const qs=getQuotes(),el=document.getElementById('quoteList');if(!qs.length){el.innerHTML='No quotes saved yet.';return;}el.innerHTML=qs.slice().reverse().map(q=>'<div class="document-card"><b>'+escDoc(q.number)+'</b> — '+escDoc(q.customerName)+' — '+escDoc(q.date)+'<br>Amount: '+docMoney(q.amount)+' | VAT: '+docMoney(q.vat)+' | Total: <b>'+docMoney(q.total)+'</b>'+(q.reference?' | Ref: '+escDoc(q.reference):'')+'<div class="document-actions"><button onclick="printDocument(\'quote\',\''+escDoc(q.id)+'\')">PRINT QUOTE</button><button onclick="useQuoteForInvoice(\''+escDoc(q.id)+'\')">CREATE INVOICE</button><button onclick="deleteQuote(\''+escDoc(q.id)+'\')">DELETE</button></div></div>').join('');}
+function renderInvoices(){const ins=getInvoices(),el=document.getElementById('invoiceList');if(!ins.length){el.innerHTML='No invoices saved yet.';return;}el.innerHTML=ins.slice().reverse().map(i=>'<div class="document-card"><b>'+escDoc(i.number)+'</b> — '+escDoc(i.customerName)+' — '+escDoc(i.date)+'<br>Total: <b>'+docMoney(i.total)+'</b> | Status: '+escDoc(i.status)+(i.reference?' | Ref: '+escDoc(i.reference):'')+'<div class="document-actions"><button onclick="printDocument(\'invoice\',\''+escDoc(i.id)+'\')">PRINT INVOICE</button><button onclick="toggleInvoiceStatus(\''+escDoc(i.id)+'\')">MARK '+(i.status==='Paid'?'UNPAID':'PAID')+'</button><button onclick="deleteInvoice(\''+escDoc(i.id)+'\')">DELETE</button></div></div>').join('');}
+function deleteQuote(id){if(!confirm('Delete this quote?'))return;saveQuotes(getQuotes().filter(x=>x.id!==id));renderQuotes();}
+function deleteInvoice(id){if(!confirm('Delete this invoice?'))return;saveInvoices(getInvoices().filter(x=>x.id!==id));renderInvoices();}
+function toggleInvoiceStatus(id){const a=getInvoices(),i=a.find(x=>x.id===id);if(!i)return;i.status=i.status==='Paid'?'Unpaid':'Paid';saveInvoices(a);renderInvoices();}
+function clearQuoteForm(){['quoteCustomer','quoteDate','quoteValid','quoteReference','quotePickup','quoteDelivery','quoteDescription','quoteAmount'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});setDocumentDates();calculateDocument('quote');}
+function clearInvoiceForm(){['invoiceCustomer','invoiceDate','invoiceDue','invoiceReference','invoicePickup','invoiceDelivery','invoiceDescription','invoiceAmount'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});setDocumentDates();calculateDocument('invoice');}
+function setDocumentDates(){const t=todayISO();if(document.getElementById('quoteDate')&&!document.getElementById('quoteDate').value)document.getElementById('quoteDate').value=t;if(document.getElementById('invoiceDate')&&!document.getElementById('invoiceDate').value)document.getElementById('invoiceDate').value=t;}
+function useQuoteForInvoice(id){const q=getQuotes().find(x=>x.id===id);if(!q)return;document.getElementById('invoiceCustomer').value=q.customerId;document.getElementById('invoiceDate').value=todayISO();document.getElementById('invoiceReference').value=q.number;document.getElementById('invoicePickup').value=q.pickup||'';document.getElementById('invoiceDelivery').value=q.delivery||'';document.getElementById('invoiceDescription').value=q.description||'';document.getElementById('invoiceAmount').value=q.amount;calculateDocument('invoice');show('quotes');document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.textContent==='Quotes & Invoices'));window.scrollTo(0,document.body.scrollHeight);}
+function printDocument(type,id){const item=(type==='quote'?getQuotes():getInvoices()).find(x=>x.id===id);if(!item)return;const d=getBusinessDetails();const title=type==='quote'?'QUOTE':'INVOICE';const due=type==='invoice'&&item.dueDate?'<p><b>Due date:</b> '+escDoc(item.dueDate)+'</p>':'';const status=type==='invoice'?'<p><b>Status:</b> '+escDoc(item.status)+'</p>':'';const html='<!doctype html><html><head><title>'+title+' '+escDoc(item.number)+'</title><style>body{font-family:Arial,sans-serif;margin:40px;max-width:800px}h1{margin-bottom:4px}.top{display:flex;justify-content:space-between;gap:30px}table{width:100%;border-collapse:collapse;margin-top:30px}td,th{border:1px solid #ccc;padding:10px;text-align:left}th{background:#f5f5f5}.right{text-align:right}.total{font-size:20px;font-weight:bold}</style></head><body onload="window.print()"><div class="top"><div><h1>'+title+'</h1><p><b>'+escDoc(item.number)+'</b></p></div><div><b>'+escDoc(d.name)+'</b><br>'+escDoc(d.phone)+'</div></div><hr><p><b>Customer:</b> '+escDoc(item.customerName)+'</p><p><b>Date:</b> '+escDoc(item.date)+'</p>'+due+status+(item.reference?'<p><b>Reference:</b> '+escDoc(item.reference)+'</p>':'')+(item.pickup||item.delivery?'<p><b>Route:</b> '+escDoc(item.pickup||'')+' → '+escDoc(item.delivery||'')+'</p>':'')+'<table><tr><th>Description</th><th class="right">Amount</th></tr><tr><td>'+escDoc(item.description||'Transport service')+'</td><td class="right">'+docMoney(item.amount)+'</td></tr><tr><td class="right">VAT ('+Number(item.vatRate||0).toFixed(2)+'%)</td><td class="right">'+docMoney(item.vat)+'</td></tr><tr><td class="right total">Total</td><td class="right total">'+docMoney(item.total)+'</td></tr></table><p style="margin-top:40px">Thank you for your business.</p>\n</body></html>';const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}}
+function initialiseStep4(){loadBusinessDetails();refreshDocumentCustomerSelects();setDocumentDates();renderQuotes();renderInvoices();calculateDocument('quote');calculateDocument('invoice');}
+</script>
+
+<script>
+/* Phase 2 Step 1 - Customer records */
+let customers = JSON.parse(localStorage.getItem('tpjm_customers') || '[]');
+let editingCustomerId = null;
+
+function customerValue(id){
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function setCustomerValue(id, value){
+  const el = document.getElementById(id);
+  if(el) el.value = value || '';
+}
+function saveCustomers(){
+  localStorage.setItem('tpjm_customers', JSON.stringify(customers));
+}
+function clearCustomerForm(){
+  editingCustomerId = null;
+  ['customerName','contactPerson','customerTelephone','customerWhatsApp','customerEmail','customerAddress','customerNotes']
+    .forEach(id => setCustomerValue(id,''));
+  const btn = document.querySelector('#customers button.primary');
+  if(btn) btn.textContent = 'Add Customer';
+}
+function saveCustomer(){
+  const name = customerValue('customerName');
+  if(!name){
+    alert('Please enter the Customer Name.');
+    return;
+  }
+  const record = {
+    id: editingCustomerId || ('cust_' + Date.now()),
+    name,
+    contactPerson: customerValue('contactPerson'),
+    telephone: customerValue('customerTelephone'),
+    whatsapp: customerValue('customerWhatsApp'),
+    email: customerValue('customerEmail'),
+    address: customerValue('customerAddress'),
+    notes: customerValue('customerNotes')
+  };
+  if(editingCustomerId){
+    const index = customers.findIndex(c => c.id === editingCustomerId);
+    if(index >= 0) customers[index] = record;
+  } else {
+    customers.push(record);
+  }
+  saveCustomers();
+  renderCustomers();
+  clearCustomerForm();
+}
+function editCustomer(id){
+  const c = customers.find(x => x.id === id);
+  if(!c) return;
+  editingCustomerId = id;
+  setCustomerValue('customerName', c.name);
+  setCustomerValue('contactPerson', c.contactPerson);
+  setCustomerValue('customerTelephone', c.telephone);
+  setCustomerValue('customerWhatsApp', c.whatsapp);
+  setCustomerValue('customerEmail', c.email);
+  setCustomerValue('customerAddress', c.address);
+  setCustomerValue('customerNotes', c.notes);
+  const btn = document.querySelector('#customers button.primary');
+  if(btn) btn.textContent = 'Save Changes';
+  document.getElementById('customerName')?.focus();
+}
+function deleteCustomer(id){
+  const c = customers.find(x => x.id === id);
+  if(!c) return;
+  if(confirm('Delete "' + c.name + '"?')){
+    customers = customers.filter(x => x.id !== id);
+    saveCustomers();
+    renderCustomers();
+    if(editingCustomerId === id) clearCustomerForm();
+  }
+}
+function escCustomer(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[ch]));
+}
+function renderCustomers(){
+  const box = document.getElementById('customerList');
+  if(!box) return;
+  if(!customers.length){
+    box.innerHTML = '<p>No customers saved yet.</p>';
+    return;
+  }
+  box.innerHTML = customers.map(c => `
+    <div class="saved-customer">
+      <h4>${escCustomer(c.name)}</h4>
+      ${c.contactPerson ? `<p><strong>Contact:</strong> ${escCustomer(c.contactPerson)}</p>` : ''}
+      ${c.telephone ? `<p><strong>Telephone:</strong> ${escCustomer(c.telephone)}</p>` : ''}
+      ${c.whatsapp ? `<p><strong>WhatsApp:</strong> ${escCustomer(c.whatsapp)}</p>` : ''}
+      ${c.email ? `<p><strong>Email:</strong> ${escCustomer(c.email)}</p>` : ''}
+      ${c.address ? `<p><strong>Address:</strong> ${escCustomer(c.address)}</p>` : ''}
+      ${c.notes ? `<p><strong>Notes:</strong> ${escCustomer(c.notes)}</p>` : ''}
+      <div class="customer-actions">
+        <button onclick="editCustomer('${String(c.id).replace(/'/g,"\\'")}')">Edit</button>
+        <button onclick="deleteCustomer('${String(c.id).replace(/'/g,"\\'")}')">Delete</button>
+        ${c.whatsapp ? `<button onclick="openCustomerWhatsApp('${String(c.id).replace(/'/g,"\\'")}')">WhatsApp</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+document.addEventListener('DOMContentLoaded', renderCustomers);
+
+function openCustomerWhatsApp(id){
+  const list = JSON.parse(localStorage.getItem('tpjm_customers') || '[]');
+  const customer = list.find(c => String(c.id) === String(id));
+  if(!customer || !customer.whatsapp){
+    alert('This customer does not have a WhatsApp number saved.');
+    return;
+  }
+  let number = String(customer.whatsapp).trim().replace(/[^0-9+]/g,'');
+  if(number.indexOf('00') === 0) number = '+' + number.slice(2);
+  if(number.charAt(0) === '0') number = '+27' + number.slice(1);
+  number = number.replace(/[^0-9]/g,'');
+  if(number.length < 10){
+    alert('Please check the WhatsApp number saved for this customer.');
+    return;
+  }
+  const message = 'Hello ' + (customer.contactPerson || customer.name || '') + ', this is Piet & Andre Transport.';
+  window.open('https://wa.me/' + number + '?text=' + encodeURIComponent(message), '_blank');
+}
+</script>
+
+<script>/* Phase 2 Step 2 - Job records */
+let editingJobId = null;
+function getManagedJobs(){ return JSON.parse(localStorage.getItem('tpjm_jobs') || '[]'); }
+function saveManagedJobs(jobs){ localStorage.setItem('tpjm_jobs', JSON.stringify(jobs)); }
+function jobValue(id){ const e=document.getElementById(id); return e ? e.value : ''; }
+function setJobValue(id,v){ const e=document.getElementById(id); if(e) e.value=v ?? ''; }
+function todayISO(){ const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function escJob(v){ return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c])); }
+function refreshJobCustomerSelect(){
+ const sel=document.getElementById('jobCustomer'); if(!sel)return;
+ const cs=JSON.parse(localStorage.getItem('tpjm_customers')||'[]'); const old=sel.value;
+ sel.innerHTML=cs.length?'<option value="">Select customer</option>'+cs.map(c=>`<option value="${escJob(c.id)}">${escJob(c.name)}</option>`).join(''):'<option value="">No customers saved — add a customer first</option>';
+ if(cs.some(c=>c.id===old))sel.value=old;
+}
+function refreshJobVehicleSelect(){
+ const sel=document.getElementById('jobVehicle'); if(!sel)return;
+ const vs=typeof getVehicles==='function'?getVehicles():JSON.parse(localStorage.getItem('tpjm_vehicles')||'[]'); const old=sel.value;
+ sel.innerHTML=vs.map(v=>`<option value="${escJob(v.id)}">${escJob(v.make+' '+v.model)}${v.reg?' — '+escJob(v.reg):''} — ${v.consumption||0} L/100 km</option>`).join('');
+ if(vs.some(v=>v.id===old))sel.value=old;
+}
+function selectedCustomer(){ const cs=JSON.parse(localStorage.getItem('tpjm_customers')||'[]'); return cs.find(c=>c.id===jobValue('jobCustomer')); }
+function selectedVehicle(){ const vs=typeof getVehicles==='function'?getVehicles():JSON.parse(localStorage.getItem('tpjm_vehicles')||'[]'); return vs.find(v=>v.id===jobValue('jobVehicle')); }
+function calculateManagedJob(){
+ const v=selectedVehicle(); const distance=+jobValue('jobDistance')||0, price=+jobValue('jobPrice')||0, diesel=+jobValue('jobDiesel')||0, tolls=+jobValue('jobTolls')||0, other=+jobValue('jobOther')||0;
+ const consumption=v?+v.consumption||0:0, litres=distance/100*consumption, fuel=litres*diesel, cost=fuel+tolls+other, profit=price-cost, margin=price?profit/price*100:0;
+ const cls=profit<0?'bad':margin<20?'warn':'good'; const verdict=profit<0?'🔴 DON’T TAKE THIS JOB':margin<20?'🟠 LOW MARGIN':'🟢 GOOD JOB';
+ document.getElementById('managedJobResult').innerHTML=`<div class="card ${cls}"><h2>${verdict}</h2><div class="job-summary">Fuel required: <b>${litres.toFixed(1)} L</b><br>Fuel cost: <b>${money(fuel)}</b><br>Tolls: <b>${money(tolls)}</b><br>Other costs: <b>${money(other)}</b><br>Total job cost: <b>${money(cost)}</b><br>Estimated profit: <div class="profit">${money(profit)}</div>Profit margin: <b>${margin.toFixed(1)}%</b></div></div>`;
+ return {distance,price,diesel,tolls,other,consumption,litres,fuel,cost,profit,margin};
+}
+function saveManagedJob(){
+ const customer=selectedCustomer(), vehicle=selectedVehicle(), date=jobValue('jobDate'), pickup=jobValue('jobPickup').trim(), delivery=jobValue('jobDelivery').trim(), distance=+jobValue('jobDistance')||0, price=+jobValue('jobPrice')||0, diesel=+jobValue('jobDiesel')||0;
+ if(!customer){alert('Please select a customer.');return;} if(!vehicle){alert('Please select a vehicle.');return;} if(!date||!pickup||!delivery||distance<=0||price<0||diesel<=0){alert('Please complete all required job fields.');return;}
+ const c=calculateManagedJob(), id=editingJobId||'JOB-'+String(Date.now()).slice(-6);
+ const rec={id,date,reference:jobValue('jobReference').trim(),customerId:customer.id,customerName:customer.name,pickup,delivery,vehicleId:vehicle.id,vehicleName:vehicle.make+' '+vehicle.model,vehicleReg:vehicle.reg||'',distance,price,diesel,consumption:c.consumption,litres:c.litres,fuel:c.fuel,tolls:c.tolls,other:c.other,cost:c.cost,profit:c.profit,margin:c.margin};
+ let jobs=getManagedJobs(); const i=jobs.findIndex(j=>j.id===id); if(i>=0)jobs[i]=rec;else jobs.unshift(rec); saveManagedJobs(jobs); editingJobId=null; clearManagedJobForm(); renderManagedJobs(); if(typeof renderJobs==='function')renderJobs(); alert(i>=0?'Job updated successfully.':'Job saved successfully.');
+}
+function editManagedJob(id){ const j=getManagedJobs().find(x=>x.id===id); if(!j)return; editingJobId=id; refreshJobCustomerSelect(); refreshJobVehicleSelect(); setJobValue('jobCustomer',j.customerId);setJobValue('jobDate',j.date);setJobValue('jobReference',j.reference);setJobValue('jobVehicle',j.vehicleId);setJobValue('jobPickup',j.pickup);setJobValue('jobDelivery',j.delivery);setJobValue('jobDistance',j.distance);setJobValue('jobPrice',j.price);setJobValue('jobDiesel',j.diesel);setJobValue('jobTolls',j.tolls);setJobValue('jobOther',j.other);calculateManagedJob();window.scrollTo(0,0); }
+function deleteManagedJob(id){ if(!confirm('Delete this job?'))return; saveManagedJobs(getManagedJobs().filter(j=>j.id!==id)); renderManagedJobs(); if(typeof renderJobs==='function')renderJobs(); }
+function clearManagedJobForm(){ editingJobId=null; setJobValue('jobCustomer','');setJobValue('jobDate',todayISO());setJobValue('jobReference','');setJobValue('jobPickup','');setJobValue('jobDelivery','');setJobValue('jobDistance','');setJobValue('jobPrice','');setJobValue('jobDiesel','');setJobValue('jobTolls','0');setJobValue('jobOther','0'); document.getElementById('managedJobResult').innerHTML=''; refreshJobCustomerSelect();refreshJobVehicleSelect(); }
+function renderManagedJobs(){
+ const list=document.getElementById('managedJobsList'); if(!list)return; const jobs=getManagedJobs(); if(!jobs.length){list.innerHTML='No jobs saved yet.';return;}
+ list.innerHTML=`<table><tr><th>Job</th><th>Date</th><th>Customer</th><th>Price</th><th>Profit</th><th>Margin</th><th>Actions</th></tr>${jobs.map(j=>`<tr><td>${escJob(j.reference||j.id)}</td><td>${escJob(j.date)}</td><td>${escJob(j.customerName)}</td><td>${money(j.price)}</td><td>${money(j.profit)}</td><td>${(+j.margin||0).toFixed(1)}%</td><td class="job-actions"><button onclick="editManagedJob('${escJob(j.id)}')">EDIT</button><button onclick="deleteManagedJob('${escJob(j.id)}')">DELETE</button></td></tr>`).join('')}</table>`;
+}
+function initialiseJobsStep2(){ refreshJobCustomerSelect();refreshJobVehicleSelect();setJobValue('jobDate',todayISO()); ['jobDistance','jobPrice','jobDiesel','jobTolls','jobOther','jobVehicle'].forEach(id=>document.getElementById(id)?.addEventListener('input',calculateManagedJob)); document.getElementById('jobVehicle')?.addEventListener('change',calculateManagedJob); renderManagedJobs(); }
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialiseJobsStep2);else initialiseJobsStep2();</script>
+<script>initialiseStep4();</script>
+<script>
+/* Phase 2 Step 5 - POD */
+function getPODs(){return JSON.parse(localStorage.getItem('tpjm_pods')||'[]');}
+function savePODs(a){localStorage.setItem('tpjm_pods',JSON.stringify(a));}
+function getManagedJobsForPOD(){return JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');}
+function refreshPODJobSelect(){const el=document.getElementById('podJob');if(!el)return;const jobs=getManagedJobsForPOD();el.innerHTML='<option value="">Select a saved job</option>'+jobs.slice().reverse().map(j=>'<option value="'+escDoc(j.id)+'">'+escDoc(j.reference||j.id)+' — '+escDoc(j.customerName||'')+' — '+escDoc(j.pickup||'')+' → '+escDoc(j.delivery||'')+'</option>').join('');}
+function loadPODJob(){const el=document.getElementById('podJob'),d=document.getElementById('podJobDetails');if(!el||!d)return;const id=String(el.value||'');const j=getManagedJobsForPOD().find(x=>String(x.id)===id);if(!j){d.innerHTML='';return;}d.innerHTML='<b>Selected job:</b> '+escDoc(j.reference||j.id)+' — '+escDoc(j.customerName||'')+'<br>'+escDoc(j.pickup||'')+' → '+escDoc(j.delivery||'')+'<br><b>Vehicle:</b> '+escDoc((j.vehicleName||'')+' '+(j.vehicleReg||''));}
+function savePOD(){const jobId=String(document.getElementById('podJob').value||''),date=document.getElementById('podDate').value;if(!jobId||!date){alert('Please select a job and enter the POD date.');return;}const j=getManagedJobsForPOD().find(x=>String(x.id)===jobId);if(!j){alert('The selected job could not be found.');return;}const p={id:'pod-'+Date.now(),jobId,jobReference:j.reference||'',customerName:j.customerName||'',pickup:j.pickup||'',delivery:j.delivery||'',vehicleName:j.vehicleName||'',vehicleReg:j.vehicleReg||'',date,receivedBy:document.getElementById('podReceivedBy').value.trim(),receivedAt:document.getElementById('podReceivedAt').value.trim(),status:document.getElementById('podStatus').value,condition:document.getElementById('podCondition').value,notes:document.getElementById('podNotes').value.trim()};const a=getPODs();a.push(p);savePODs(a);renderPODs();clearPODForm();alert('POD saved successfully.');}
+function deletePOD(id){if(!confirm('Delete this POD record?'))return;savePODs(getPODs().filter(x=>x.id!==id));renderPODs();}
+function printPOD(id){const p=getPODs().find(x=>x.id===id);if(!p)return;const html='<!doctype html><html><head><title>Proof of Delivery</title><style>body{font-family:Arial,sans-serif;margin:40px;max-width:800px}h1{margin-bottom:5px}.box{border:1px solid #bbb;padding:12px;margin:15px 0}table{width:100%;border-collapse:collapse}td{border:1px solid #ccc;padding:9px}td:first-child{font-weight:bold;width:30%}.notes{min-height:100px;white-space:pre-wrap}</style></head><body onload="window.print()"><h1>PROOF OF DELIVERY</h1><p><b>POD Date:</b> '+escDoc(p.date)+'</p><div class="box"><table><tr><td>Job Reference</td><td>'+escDoc(p.jobReference||'—')+'</td></tr><tr><td>Customer</td><td>'+escDoc(p.customerName||'—')+'</td></tr><tr><td>Pickup</td><td>'+escDoc(p.pickup||'—')+'</td></tr><tr><td>Delivery</td><td>'+escDoc(p.delivery||'—')+'</td></tr><tr><td>Vehicle</td><td>'+escDoc((p.vehicleName||'')+' '+(p.vehicleReg||''))+'</td></tr></table></div><div class="box"><table><tr><td>Status</td><td>'+escDoc(p.status)+'</td></tr><tr><td>Condition</td><td>'+escDoc(p.condition)+'</td></tr><tr><td>Received By</td><td>'+escDoc(p.receivedBy||'—')+'</td></tr><tr><td>Received At</td><td>'+escDoc(p.receivedAt||'—')+'</td></tr></table></div><div class="box"><b>Notes / Exceptions</b><div class="notes">'+escDoc(p.notes||'None')+'</div></div><p style="margin-top:60px">Receiver signature: __________________________________________</p></body></html>';const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}}
+function renderPODs(){const el=document.getElementById('podList');if(!el)return;const a=getPODs();if(!a.length){el.innerHTML='No POD records saved yet.';return;}el.innerHTML=a.slice().reverse().map(p=>'<div class="document-card"><b>'+escDoc(p.jobReference||'POD')+'</b> — '+escDoc(p.customerName)+' — '+escDoc(p.date)+'<br>'+escDoc(p.pickup)+' → '+escDoc(p.delivery)+' | '+escDoc(p.status)+' | '+escDoc(p.condition)+(p.receivedBy?' | Received by: '+escDoc(p.receivedBy):'')+'<div class="document-actions"><button onclick="printPOD(\''+escDoc(p.id)+'\')">PRINT POD</button><button onclick="deletePOD(\''+escDoc(p.id)+'\')">DELETE</button></div></div>').join('');}
+function clearPODForm(){document.getElementById('podJob').value='';document.getElementById('podJobDetails').innerHTML='';document.getElementById('podDate').value=todayISO();document.getElementById('podReceivedBy').value='';document.getElementById('podReceivedAt').value='';document.getElementById('podStatus').value='Delivered';document.getElementById('podCondition').value='Good condition';document.getElementById('podNotes').value='';}
+function initialiseStep5(){refreshPODJobSelect();clearPODForm();renderPODs();}
+initialiseStep5();
+</script>
+
+<script>
+/* Phase 2 Step 6 - Maintenance Function 1 */
+function getMaintenanceRecords(){return JSON.parse(localStorage.getItem('tpjm_maintenance')||'[]');}
+function saveMaintenanceRecords(a){localStorage.setItem('tpjm_maintenance',JSON.stringify(a));}
+function refreshMaintenanceVehicleSelect(){const sel=document.getElementById('maintVehicle');if(!sel)return;const vs=typeof getVehicles==='function'?getVehicles():JSON.parse(localStorage.getItem('tpjm_vehicles')||'[]');const old=sel.value;sel.innerHTML='<option value="">Select vehicle</option>'+vs.map(v=>'<option value="'+escJob(v.id)+'">'+escJob((v.make||'')+' '+(v.model||''))+((v.reg)?' — '+escJob(v.reg):'')+'</option>').join('');if(vs.some(v=>String(v.id)===String(old)))sel.value=old;}
+function saveMaintenance(){const vehicleId=document.getElementById('maintVehicle').value,date=document.getElementById('maintDate').value,odometer=Number(document.getElementById('maintOdometer').value),type=document.getElementById('maintType').value,description=document.getElementById('maintDescription').value.trim(),cost=Number(document.getElementById('maintCost').value);if(!vehicleId||!date||odometer<0||!type||!description||cost<0||Number.isNaN(odometer)||Number.isNaN(cost)){alert('Please complete all required maintenance fields.');return;}const vs=typeof getVehicles==='function'?getVehicles():JSON.parse(localStorage.getItem('tpjm_vehicles')||'[]');const v=vs.find(x=>String(x.id)===String(vehicleId));if(!v){alert('The selected vehicle could not be found.');return;}const rec={id:'maint-'+Date.now(),vehicleId,vehicleName:(v.make||'')+' '+(v.model||''),vehicleReg:v.reg||'',date,odometer,type,description,cost,nextKm:document.getElementById('maintNextKm').value?Number(document.getElementById('maintNextKm').value):null,nextDate:document.getElementById('maintNextDate').value||'',notes:document.getElementById('maintNotes').value.trim()};const a=getMaintenanceRecords();a.push(rec);saveMaintenanceRecords(a);renderMaintenanceRecords();clearMaintenanceForm();alert('Maintenance record saved successfully.');}
+function deleteMaintenance(id){if(!confirm('Delete this maintenance record?'))return;saveMaintenanceRecords(getMaintenanceRecords().filter(x=>x.id!==id));renderMaintenanceRecords();}
+function renderMaintenanceRecords(){const el=document.getElementById('maintenanceList');if(!el)return;const a=getMaintenanceRecords();if(!a.length){el.innerHTML='No maintenance records saved yet.';return;}el.innerHTML='<table><tr><th>Date</th><th>Vehicle</th><th>Odometer</th><th>Type</th><th>Cost</th><th>Actions</th></tr>'+a.slice().reverse().map(r=>'<tr><td>'+escJob(r.date)+'</td><td>'+escJob(r.vehicleName||'')+(r.vehicleReg?' — '+escJob(r.vehicleReg):'')+'</td><td>'+Number(r.odometer||0).toLocaleString('en-ZA')+' km</td><td>'+escJob(r.type)+'</td><td>'+money(r.cost)+'</td><td><button onclick="deleteMaintenance(\''+escJob(r.id)+'\')">DELETE</button></td></tr><tr><td colspan="6"><b>Description:</b> '+escJob(r.description)+(r.nextKm!==null&&r.nextKm!==undefined?' &nbsp; <b>Next service:</b> '+Number(r.nextKm).toLocaleString('en-ZA')+' km':'')+(r.nextDate?' &nbsp; <b>Next date:</b> '+escJob(r.nextDate):'')+(r.notes?' &nbsp; <b>Notes:</b> '+escJob(r.notes):'')+'</td></tr>').join('')+'</table>'; }
+function clearMaintenanceForm(){const d=document.getElementById('maintDate');if(d)d.value=todayISO();document.getElementById('maintVehicle').value='';document.getElementById('maintOdometer').value='';document.getElementById('maintType').value='Service';document.getElementById('maintDescription').value='';document.getElementById('maintCost').value='';document.getElementById('maintNextKm').value='';document.getElementById('maintNextDate').value='';document.getElementById('maintNotes').value='';}
+function initialiseMaintenanceStep6(){refreshMaintenanceVehicleSelect();clearMaintenanceForm();renderMaintenanceRecords();}
+function getReminderSettings(){return JSON.parse(localStorage.getItem('tpjm_reminder_settings')||'{"days":30,"km":1000}');}
+function saveReminderSettings(){const days=Math.max(0,Number(document.getElementById('reminderDays').value)||0);const km=Math.max(0,Number(document.getElementById('reminderKm').value)||0);localStorage.setItem('tpjm_reminder_settings',JSON.stringify({days,km}));renderReminders();alert('Reminder settings saved successfully.');}
+function renderReminders(){const list=document.getElementById('reminderList');if(!list)return;const settings=getReminderSettings();const dEl=document.getElementById('reminderDays'),kEl=document.getElementById('reminderKm');if(dEl)dEl.value=settings.days;if(kEl)kEl.value=settings.km;const records=getMaintenanceRecords();const vehicles=typeof getVehicles==='function'?getVehicles():JSON.parse(localStorage.getItem('tpjm_vehicles')||'[]');const today=new Date();today.setHours(0,0,0,0);const reminders=[];records.forEach(r=>{const v=vehicles.find(x=>String(x.id)===String(r.vehicleId));const currentOdo=v&&Number.isFinite(Number(v.odometer))?Number(v.odometer):null;if(r.nextDate){const due=new Date(r.nextDate+'T00:00:00');if(!Number.isNaN(due.getTime())){const daysAway=Math.ceil((due-today)/86400000);if(daysAway<0||daysAway<=settings.days)reminders.push({type:'date',status:daysAway<0?'OVERDUE':'DUE SOON',vehicle:r.vehicleName+(r.vehicleReg?' — '+r.vehicleReg:''),detail:(daysAway<0?Math.abs(daysAway)+' days overdue':'Due in '+daysAway+' days')+' ('+r.nextDate+')',description:r.description});}}if(r.nextKm!==null&&r.nextKm!==undefined&&r.nextKm!==''&&currentOdo!==null){const kmAway=Number(r.nextKm)-currentOdo;if(kmAway<0||kmAway<=settings.km)reminders.push({type:'km',status:kmAway<0?'OVERDUE':'DUE SOON',vehicle:r.vehicleName+(r.vehicleReg?' — '+r.vehicleReg:''),detail:(kmAway<0?Math.abs(kmAway).toLocaleString('en-ZA')+' km overdue':'Due in '+kmAway.toLocaleString('en-ZA')+' km'),description:r.description});}});if(!reminders.length){list.innerHTML='<p>No maintenance reminders at this time.</p>';return;}list.innerHTML=reminders.map(x=>'<div class="document-card"><b>'+escJob(x.status)+'</b> — '+escJob(x.vehicle)+'<br>'+escJob(x.description)+'<br><span class="small">'+escJob(x.detail)+'</span></div>').join('');}
+
+/* Phase 2 Step 6 - Maintenance Function 3: Odometer Tracking */
+function refreshOdometerVehicleSelect(){const sel=document.getElementById('odoVehicle');if(!sel)return;const vs=getVehicles();const old=sel.value;sel.innerHTML='<option value="">Select vehicle</option>'+vs.map(v=>'<option value="'+escJob(v.id)+'">'+escJob((v.make||'')+' '+(v.model||''))+(v.reg?' — '+escJob(v.reg):'')+'</option>').join('');if(vs.some(v=>String(v.id)===String(old)))sel.value=old;}
+function renderOdometerList(){const el=document.getElementById('odometerList');if(!el)return;const vs=getVehicles();if(!vs.length){el.innerHTML='No vehicles found.';return;}el.innerHTML='<table><tr><th>Vehicle</th><th>Registration</th><th>Current Odometer</th></tr>'+vs.map(v=>'<tr><td>'+escJob((v.make||'')+' '+(v.model||''))+'</td><td>'+escJob(v.reg||'')+'</td><td>'+Number(v.odo||0).toLocaleString('en-ZA')+' km</td></tr>').join('')+'</table>';}
+function saveOdometerUpdate(){const vehicleId=document.getElementById('odoVehicle').value;const reading=Number(document.getElementById('odoReading').value);if(!vehicleId||!Number.isFinite(reading)||reading<0){alert('Please select a vehicle and enter a valid odometer reading.');return;}const vs=getVehicles();const v=vs.find(x=>String(x.id)===String(vehicleId));if(!v){alert('The selected vehicle could not be found.');return;}const current=Number(v.odo)||0;if(reading<current){if(!confirm('The new odometer reading is lower than the current reading of '+current.toLocaleString('en-ZA')+' km. Do you want to save it anyway?'))return;}v.odo=reading;saveVehicles(vs);renderVehicles();renderOdometerList();renderReminders();clearOdometerForm();alert('Odometer reading saved successfully.');}
+function clearOdometerForm(){const sel=document.getElementById('odoVehicle'),inp=document.getElementById('odoReading');if(sel)sel.value='';if(inp)inp.value='';}
+function initialiseOdometerTracking(){refreshOdometerVehicleSelect();renderOdometerList();clearOdometerForm();}
+
+
+/* Phase 2 Step 6 - Maintenance Function 4: Vehicle License Renewal Reminders */
+function getLicenseReminderSettings(){return JSON.parse(localStorage.getItem('tpjm_license_reminder_settings')||'{"days":30}');}
+function saveLicenseReminderSettings(){const days=Math.max(0,Number(document.getElementById('licenseReminderDays').value)||0);localStorage.setItem('tpjm_license_reminder_settings',JSON.stringify({days}));renderLicenseReminders();alert('License reminder settings saved successfully.');}
+function renderLicenseReminders(){const list=document.getElementById('licenseReminderList');if(!list)return;const settings=getLicenseReminderSettings();const dEl=document.getElementById('licenseReminderDays');if(dEl)dEl.value=settings.days;const vehicles=typeof getVehicles==='function'?getVehicles():JSON.parse(localStorage.getItem('tpjm_vehicles')||'[]');if(!vehicles.length){list.innerHTML='No vehicles found.';return;}const today=new Date();today.setHours(0,0,0,0);list.innerHTML='<table><tr><th>Vehicle</th><th>Registration</th><th>Renewal Date</th><th>Status</th></tr>'+vehicles.map(v=>{if(!v.license)return '<tr><td>'+escJob((v.make||'')+' '+(v.model||''))+'</td><td>'+escJob(v.reg||'')+'</td><td>Not set</td><td>DATE NOT SET</td></tr>';const due=new Date(v.license+'T00:00:00');if(Number.isNaN(due.getTime()))return '<tr><td>'+escJob((v.make||'')+' '+(v.model||''))+'</td><td>'+escJob(v.reg||'')+'</td><td>'+escJob(v.license)+'</td><td>INVALID DATE</td></tr>';const daysAway=Math.ceil((due-today)/86400000);let status=daysAway<0?'OVERDUE':(daysAway<=settings.days?'DUE SOON':'CURRENT');let detail=daysAway<0?Math.abs(daysAway)+' days overdue':(daysAway===0?'Due today':(daysAway+' days remaining'));return '<tr><td>'+escJob((v.make||'')+' '+(v.model||''))+'</td><td>'+escJob(v.reg||'')+'</td><td>'+due.toLocaleDateString('en-ZA')+'</td><td><b>'+status+'</b><br><span class="small">'+detail+'</span></td></tr>';}).join('')+'</table>';}
+function initialiseLicenseReminders(){const s=getLicenseReminderSettings();const d=document.getElementById('licenseReminderDays');if(d)d.value=s.days;renderLicenseReminders();}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{initialiseMaintenanceStep6();renderReminders();initialiseOdometerTracking();initialiseLicenseReminders();});else {initialiseMaintenanceStep6();renderReminders();initialiseOdometerTracking();initialiseLicenseReminders();}
+</script>
+<script>
+/* Step 7 Function 1 - Dashboard Summary + one-time Job Transfer */
+function getDashboardJobs(){try{const d=JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');return Array.isArray(d)?d:[];}catch(e){return[];}}
+function renderDashboardSummary(){const jobs=getDashboardJobs(),now=new Date(),m=now.getMonth(),y=now.getFullYear(),mj=jobs.filter(j=>{const d=new Date((j.date||'')+'T00:00:00');return !Number.isNaN(d.getTime())&&d.getMonth()===m&&d.getFullYear()===y;}),rev=mj.reduce((a,j)=>a+(Number(j.price)||0),0),cost=mj.reduce((a,j)=>a+(Number(j.cost)||0),0),prof=mj.reduce((a,j)=>a+(Number(j.profit)||0),0),mar=mj.length?mj.reduce((a,j)=>a+(Number(j.margin)||0),0)/mj.length:0,good=mj.filter(j=>(Number(j.margin)||0)>=20).length,low=mj.filter(j=>(Number(j.margin)||0)>=0&&(Number(j.margin)||0)<20).length,dont=mj.filter(j=>(Number(j.profit)||0)<0).length,set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};set('jobCount',mj.length);set('dashboardRevenue',money(rev));set('dashboardCosts',money(cost));set('dashboardProfit',money(prof));set('dashboardMargin',mar.toFixed(1)+'%');set('dashboardGood',good);set('dashboardLow',low);set('dashboardDont',dont);const r=document.getElementById('recent');if(r){if(!jobs.length)r.textContent='No jobs saved yet.';else r.innerHTML='<table><tr><th>Job</th><th>Date</th><th>Customer</th><th>Price</th><th>Profit</th><th>Margin</th></tr>'+jobs.slice().reverse().slice(0,5).map(j=>'<tr><td>'+escJob(j.reference||j.id)+'</td><td>'+escJob(j.date||'')+'</td><td>'+escJob(j.customerName||'')+'</td><td>'+money(j.price)+'</td><td>'+money(j.profit)+'</td><td>'+Number(j.margin||0).toFixed(1)+'%</td></tr>').join('')+'</table>';}}
+function importJobsForTransfer(){const input=document.getElementById('jobTransferFile'),status=document.getElementById('jobTransferStatus');if(!input||!input.files||!input.files.length){alert('Please choose your transport job transfer JSON file first.');return;}const reader=new FileReader();reader.onload=function(e){try{const raw=String(e.target.result||'').replace(/^\uFEFF/,'').trim();if(!raw)throw new Error('The selected file is empty.');const p=JSON.parse(raw);let a=Array.isArray(p)?p:(p&&Array.isArray(p.jobs)?p.jobs:(p&&Array.isArray(p.data)?p.data:null));if(!a)throw new Error('The JSON file does not contain a saved jobs list.');a=a.filter(x=>x&&typeof x==='object');if(!a.length)throw new Error('No saved jobs were found in the selected file.');const existing=getDashboardJobs(),ids=new Set(existing.map(j=>String(j.id||'')));let added=0;a.forEach(j=>{const c=Object.assign({},j);if(c.id==null||String(c.id)==='')c.id='imported-'+Date.now()+'-'+added;if(!ids.has(String(c.id))){existing.push(c);ids.add(String(c.id));added++;}});localStorage.setItem('tpjm_jobs',JSON.stringify(existing));if(typeof renderManagedJobs==='function')renderManagedJobs();renderDashboardSummary();if(status)status.textContent=added+' saved job(s) imported successfully. '+(a.length-added)+' duplicate job(s) skipped.';alert(added+' saved job(s) imported successfully.');input.value='';}catch(err){if(status)status.textContent='Import failed: '+(err&&err.message?err.message:'Unknown error');alert('Import failed: '+(err&&err.message?err.message:'Unknown error'));}};reader.onerror=function(){if(status)status.textContent='Import failed: the file could not be read.';alert('Import failed: the file could not be read.');};reader.readAsText(input.files[0]);}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',renderDashboardSummary);else renderDashboardSummary();
+</script>
+<script>
+/* Phase 2 Step 7 - Function 2: Profit & Job Report */
+function getProfitReportJobs(){return JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');}
+function generateProfitJobReport(){
+ const all=getProfitReportJobs();
+ const from=(document.getElementById('reportFrom')||{}).value||'';
+ const to=(document.getElementById('reportTo')||{}).value||'';
+ const jobs=all.filter(j=>{const d=String(j.date||'');return (!from||d>=from)&&(!to||d<=to);});
+ const rev=jobs.reduce((a,j)=>a+(Number(j.price)||0),0),cost=jobs.reduce((a,j)=>a+(Number(j.cost)||0),0),profit=jobs.reduce((a,j)=>a+(Number(j.profit)||0),0),margin=rev?profit/rev*100:0;
+ const el=document.getElementById('profitJobReportResult');if(!el)return;
+ if(!jobs.length){el.innerHTML='<div class="card"><h3>No jobs found</h3><p>No saved jobs match the selected date range.</p></div>';return;}
+ el.innerHTML='<div class="card"><h3>Report Summary</h3><div class="grid"><div><div class="small">Jobs</div><div class="stat">'+jobs.length+'</div></div><div><div class="small">Revenue</div><div class="stat">'+money(rev)+'</div></div><div><div class="small">Total Costs</div><div class="stat">'+money(cost)+'</div></div><div><div class="small">Total Profit</div><div class="stat">'+money(profit)+'</div></div><div><div class="small">Profit Margin</div><div class="stat">'+margin.toFixed(1)+'%</div></div></div></div><div class="card"><h3>Job Details</h3><div style="overflow-x:auto"><table><tr><th>Date</th><th>Job</th><th>Customer</th><th>Pickup → Delivery</th><th>Vehicle</th><th>Distance</th><th>Price</th><th>Fuel</th><th>Tolls</th><th>Other</th><th>Total Cost</th><th>Profit</th><th>Margin</th><th>Verdict</th></tr>'+jobs.map(j=>{const p=Number(j.profit)||0,m=Number(j.margin)||0;const v=p<0?'DON’T TAKE JOB':m<20?'LOW MARGIN':'GOOD JOB';return '<tr><td>'+escJob(j.date||'')+'</td><td>'+escJob(j.reference||j.id||'')+'</td><td>'+escJob(j.customerName||'')+'</td><td>'+escJob((j.pickup||'')+' → '+(j.delivery||''))+'</td><td>'+escJob((j.vehicleName||'')+(j.vehicleReg?' — '+j.vehicleReg:''))+'</td><td>'+Number(j.distance||0).toFixed(1)+' km</td><td>'+money(j.price)+'</td><td>'+money(j.fuel)+'</td><td>'+money(j.tolls)+'</td><td>'+money(j.other)+'</td><td>'+money(j.cost)+'</td><td>'+money(j.profit)+'</td><td>'+m.toFixed(1)+'%</td><td>'+v+'</td></tr>';}).join('')+'</table></div></div>';
+}
+function clearProfitJobReport(){const f=document.getElementById('reportFrom'),t=document.getElementById('reportTo');if(f)f.value='';if(t)t.value='';generateProfitJobReport();}
+function printProfitJobReport(){const el=document.getElementById('profitJobReportResult');if(!el||!el.innerHTML||el.innerText.includes('No jobs found')){generateProfitJobReport();return;}const w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><title>Profit & Job Report</title><style>body{font-family:Arial,sans-serif;margin:25px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #bbb;padding:5px;text-align:left}th{font-weight:bold}.stat{font-size:20px;font-weight:bold}.summary{display:flex;gap:20px;margin-bottom:20px}</style></head><body><h1>PROFIT & JOB REPORT</h1>'+el.innerHTML+'</body></html>');w.document.close();w.focus();w.print();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(document.getElementById('profitReport'))generateProfitJobReport();});else generateProfitJobReport();
+</script>
+
+<script>
+function getFuelExpenseReportJobs(){const jobs=JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');const from=document.getElementById('fuelReportFrom')?.value||'';const to=document.getElementById('fuelReportTo')?.value||'';return jobs.filter(j=>{const d=String(j.date||'');return (!from||d>=from)&&(!to||d<=to);});}
+function generateFuelExpenseReport(){const jobs=getFuelExpenseReportJobs();let distance=0,litres=0,fuel=0,tolls=0,other=0,total=0;jobs.forEach(j=>{distance+=Number(j.distance)||0;litres+=Number(j.litres)||0;fuel+=Number(j.fuel)||0;tolls+=Number(j.tolls)||0;other+=Number(j.other)||0;total+=Number(j.cost)||((Number(j.fuel)||0)+(Number(j.tolls)||0)+(Number(j.other)||0));});const perKm=distance?total/distance:0;let html='<div class="card"><h3>Fuel &amp; Expense Summary</h3><div class="grid"><div><b>Jobs</b><br>'+jobs.length+'</div><div><b>Total Distance</b><br>'+distance.toFixed(1)+' km</div><div><b>Fuel Used</b><br>'+litres.toFixed(2)+' L</div><div><b>Fuel Cost</b><br>R '+fuel.toFixed(2)+'</div><div><b>Tolls</b><br>R '+tolls.toFixed(2)+'</div><div><b>Other Costs</b><br>R '+other.toFixed(2)+'</div><div><b>Total Costs</b><br>R '+total.toFixed(2)+'</div><div><b>Cost per km</b><br>R '+perKm.toFixed(2)+'</div></div></div>';html+='<div class="card"><h3>Job-by-Job Fuel &amp; Expense Detail</h3>';if(!jobs.length){html+='<p>No jobs found for the selected date range.</p>';}else{html+='<div style="overflow:auto"><table><tr><th>Date</th><th>Job</th><th>Customer</th><th>Distance</th><th>Fuel</th><th>Tolls</th><th>Other</th><th>Total Cost</th></tr>';jobs.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).forEach(j=>{const tc=Number(j.cost)||((Number(j.fuel)||0)+(Number(j.tolls)||0)+(Number(j.other)||0));html+='<tr><td>'+escDoc(j.date||'')+'</td><td>'+escDoc(j.reference||j.id||'')+'</td><td>'+escDoc(j.customerName||'')+'</td><td>'+((Number(j.distance)||0).toFixed(1))+' km</td><td>R '+((Number(j.fuel)||0).toFixed(2))+'</td><td>R '+((Number(j.tolls)||0).toFixed(2))+'</td><td>R '+((Number(j.other)||0).toFixed(2))+'</td><td>R '+tc.toFixed(2)+'</td></tr>';});html+='</table></div>';}html+='</div>';document.getElementById('fuelExpenseReportResult').innerHTML=html;}
+function clearFuelExpenseReport(){const a=document.getElementById('fuelReportFrom'),b=document.getElementById('fuelReportTo');if(a)a.value='';if(b)b.value='';const r=document.getElementById('fuelExpenseReportResult');if(r)r.innerHTML='';}
+function printFuelExpenseReport(){generateFuelExpenseReport();setTimeout(()=>{const x=document.getElementById('fuelExpenseReportResult'),w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><title>Fuel & Expense Report</title><style>body{font-family:Arial,sans-serif;margin:30px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body>'+x.innerHTML+'</body></html>');w.document.close();w.focus();w.print();},50);}
+</script>
+<script>
+function getVehiclePerformanceJobs(){const jobs=JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');const from=document.getElementById('vehiclePerfFrom')?.value||'';const to=document.getElementById('vehiclePerfTo')?.value||'';return jobs.filter(j=>{const d=String(j.date||'');return (!from||d>=from)&&(!to||d<=to);});}
+function generateVehiclePerformanceReport(){
+ const jobs=getVehiclePerformanceJobs(),vehicles=typeof getVehicles==='function'?getVehicles():JSON.parse(localStorage.getItem('tpjm_vehicles')||'[]');
+ const rows=vehicles.map(v=>{const vjobs=jobs.filter(j=>String(j.vehicleId||'')===String(v.id));const distance=vjobs.reduce((a,j)=>a+(Number(j.distance)||0),0),revenue=vjobs.reduce((a,j)=>a+(Number(j.price)||0),0),fuel=vjobs.reduce((a,j)=>a+(Number(j.fuel)||0),0),litres=vjobs.reduce((a,j)=>a+(Number(j.litres)||0),0),tolls=vjobs.reduce((a,j)=>a+(Number(j.tolls)||0),0),other=vjobs.reduce((a,j)=>a+(Number(j.other)||0),0),cost=vjobs.reduce((a,j)=>a+(Number(j.cost)||((Number(j.fuel)||0)+(Number(j.tolls)||0)+(Number(j.other)||0))),0),profit=vjobs.reduce((a,j)=>a+(Number(j.profit)||((Number(j.price)||0)-(Number(j.cost)||0))),0),margin=revenue?profit/revenue*100:0,actualConsumption=distance?litres/distance*100:0,revenuePerKm=distance?revenue/distance:0;return {v,vjobs,distance,revenue,fuel,litres,tolls,other,cost,profit,margin,actualConsumption,revenuePerKm};});
+ const active=rows.filter(r=>r.vjobs.length>0),el=document.getElementById('vehiclePerformanceReportResult');if(!el)return;
+ if(!active.length){el.innerHTML='<div class="card"><h3>No vehicle job data found</h3><p>No saved jobs match the selected date range.</p></div>';return;}
+ const totalJobs=active.reduce((a,r)=>a+r.vjobs.length,0),totalDistance=active.reduce((a,r)=>a+r.distance,0),totalRevenue=active.reduce((a,r)=>a+r.revenue,0),totalCost=active.reduce((a,r)=>a+r.cost,0),totalProfit=active.reduce((a,r)=>a+r.profit,0),totalMargin=totalRevenue?totalProfit/totalRevenue*100:0;
+ let html='<div class="card"><h3>Overall Summary</h3><div class="grid"><div><div class="small">Jobs</div><div class="stat">'+totalJobs+'</div></div><div><div class="small">Total Distance</div><div class="stat">'+totalDistance.toFixed(1)+' km</div></div><div><div class="small">Revenue</div><div class="stat">'+money(totalRevenue)+'</div></div><div><div class="small">Total Costs</div><div class="stat">'+money(totalCost)+'</div></div><div><div class="small">Total Profit</div><div class="stat">'+money(totalProfit)+'</div></div><div><div class="small">Profit Margin</div><div class="stat">'+totalMargin.toFixed(1)+'%</div></div></div></div>';
+ html+='<div class="card"><h3>Vehicle Performance Details</h3><div style="overflow-x:auto"><table><tr><th>Vehicle</th><th>Jobs</th><th>Distance</th><th>Revenue</th><th>Fuel Cost</th><th>Total Costs</th><th>Profit</th><th>Margin</th><th>Fuel Used</th><th>Actual L/100 km</th><th>Revenue/km</th></tr>';
+ active.forEach(r=>{html+='<tr><td>'+escDoc((r.v.make||'')+' '+(r.v.model||'')+(r.v.reg?' — '+r.v.reg:''))+'</td><td>'+r.vjobs.length+'</td><td>'+r.distance.toFixed(1)+' km</td><td>'+money(r.revenue)+'</td><td>'+money(r.fuel)+'</td><td>'+money(r.cost)+'</td><td>'+money(r.profit)+'</td><td>'+r.margin.toFixed(1)+'%</td><td>'+r.litres.toFixed(2)+' L</td><td>'+r.actualConsumption.toFixed(2)+'</td><td>'+money(r.revenuePerKm)+'</td></tr>';});
+ html+='</table></div></div>';el.innerHTML=html;
+}
+function clearVehiclePerformanceReport(){const a=document.getElementById('vehiclePerfFrom'),b=document.getElementById('vehiclePerfTo');if(a)a.value='';if(b)b.value='';const r=document.getElementById('vehiclePerformanceReportResult');if(r)r.innerHTML='';}
+function printVehiclePerformanceReport(){generateVehiclePerformanceReport();setTimeout(()=>{const x=document.getElementById('vehiclePerformanceReportResult'),w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><title>Vehicle Performance Report</title><style>body{font-family:Arial,sans-serif;margin:30px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #ccc;padding:7px;text-align:left}.stat{font-size:20px;font-weight:bold}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}</style></head><body><h1>VEHICLE PERFORMANCE REPORT</h1>'+x.innerHTML+'</body></html>');w.document.close();w.focus();w.print();},50);}
+</script>
+
+
+<script>
+/* Step 7 Function 5 - Customer Report */
+function getCustomerReportJobs(){try{const d=JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');return Array.isArray(d)?d:[];}catch(e){return[];}}
+function generateCustomerReport(){
+ const all=getCustomerReportJobs();
+ const from=document.getElementById('customerReportFrom')?.value||'';
+ const to=document.getElementById('customerReportTo')?.value||'';
+ const jobs=all.filter(j=>{const d=String(j.date||'');return (!from||d>=from)&&(!to||d<=to);});
+ const groups={};
+ jobs.forEach(j=>{const id=String(j.customerId||'');const name=String(j.customerName||'Unknown Customer');const key=id||('name:'+name);if(!groups[key])groups[key]={name,jobs:[],distance:0,revenue:0,cost:0,profit:0};const g=groups[key];g.jobs.push(j);g.distance+=Number(j.distance)||0;g.revenue+=Number(j.price)||0;g.cost+=Number(j.cost)||((Number(j.fuel)||0)+(Number(j.tolls)||0)+(Number(j.other)||0));g.profit+=Number(j.profit)||((Number(j.price)||0)-(Number(j.cost)||0));});
+ const rows=Object.values(groups).sort((a,b)=>b.revenue-a.revenue);
+ const el=document.getElementById('customerReportResult');if(!el)return;
+ if(!rows.length){el.innerHTML='<div class="card"><p>No customer jobs found for the selected dates.</p></div>';return;}
+ const totalRevenue=rows.reduce((a,r)=>a+r.revenue,0),totalCost=rows.reduce((a,r)=>a+r.cost,0),totalProfit=rows.reduce((a,r)=>a+r.profit,0),totalDistance=rows.reduce((a,r)=>a+r.distance,0),margin=totalRevenue?totalProfit/totalRevenue*100:0;
+ let html='<div class="card"><h3>Customer Summary</h3><div class="grid"><div><div class="small">Customers</div><div class="stat">'+rows.length+'</div></div><div><div class="small">Jobs</div><div class="stat">'+jobs.length+'</div></div><div><div class="small">Total Distance</div><div class="stat">'+totalDistance.toFixed(1)+' km</div></div><div><div class="small">Total Revenue</div><div class="stat">'+money(totalRevenue)+'</div></div><div><div class="small">Total Costs</div><div class="stat">'+money(totalCost)+'</div></div><div><div class="small">Total Profit</div><div class="stat">'+money(totalProfit)+'</div></div><div><div class="small">Profit Margin</div><div class="stat">'+margin.toFixed(1)+'%</div></div></div></div>';
+ html+='<div class="card"><h3>Customer Performance Details</h3><div style="overflow-x:auto"><table><tr><th>Customer</th><th>Jobs</th><th>Distance</th><th>Revenue</th><th>Total Costs</th><th>Profit</th><th>Margin</th><th>Revenue/km</th></tr>';
+ rows.forEach(r=>{const m=r.revenue?r.profit/r.revenue*100:0,pkm=r.distance?r.revenue/r.distance:0;html+='<tr><td>'+escDoc(r.name)+'</td><td>'+r.jobs.length+'</td><td>'+r.distance.toFixed(1)+' km</td><td>'+money(r.revenue)+'</td><td>'+money(r.cost)+'</td><td>'+money(r.profit)+'</td><td>'+m.toFixed(1)+'%</td><td>'+money(pkm)+'</td></tr>';});
+ html+='</table></div></div>';
+ el.innerHTML=html;
+}
+function clearCustomerReport(){const f=document.getElementById('customerReportFrom'),t=document.getElementById('customerReportTo');if(f)f.value='';if(t)t.value='';const r=document.getElementById('customerReportResult');if(r)r.innerHTML='';}
+function printCustomerReport(){generateCustomerReport();const x=document.getElementById('customerReportResult');if(!x||!x.innerHTML)return;const w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><title>Customer Report</title><style>body{font-family:Arial,sans-serif;margin:30px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #ccc;padding:7px;text-align:left}.stat{font-size:20px;font-weight:bold}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}</style></head><body><h1>CUSTOMER REPORT</h1>'+x.innerHTML+'</body></html>');w.document.close();w.focus();w.print();}
+</script>
+<script>
+/* Step 7 Function 6 - Date-Range Reports */
+function getDateRangeReportJobs(){try{const all=JSON.parse(localStorage.getItem('tpjm_jobs')||'[]');const from=document.getElementById('dateRangeFrom')?.value||'';const to=document.getElementById('dateRangeTo')?.value||'';return(Array.isArray(all)?all:[]).filter(j=>{const d=String(j.date||'');return(!from||d>=from)&&(!to||d<=to);});}catch(e){return[];}}
+function generateDateRangeReport(){const jobs=getDateRangeReportJobs(),el=document.getElementById('dateRangeReportResult');if(!el)return;if(!jobs.length){el.innerHTML='<div class="card"><h3>No jobs found</h3><p>No saved jobs match the selected date range.</p></div>';return;}const revenue=jobs.reduce((a,j)=>a+(Number(j.price)||0),0),costs=jobs.reduce((a,j)=>a+(Number(j.cost)||((Number(j.fuel)||0)+(Number(j.tolls)||0)+(Number(j.other)||0))),0),profit=jobs.reduce((a,j)=>a+(Number(j.profit)||((Number(j.price)||0)-(Number(j.cost)||0))),0),distance=jobs.reduce((a,j)=>a+(Number(j.distance)||0),0),litres=jobs.reduce((a,j)=>a+(Number(j.litres)||0),0),fuel=jobs.reduce((a,j)=>a+(Number(j.fuel)||0),0),tolls=jobs.reduce((a,j)=>a+(Number(j.tolls)||0),0),other=jobs.reduce((a,j)=>a+(Number(j.other)||0),0),margin=revenue?profit/revenue*100:0,costPerKm=distance?costs/distance:0,revenuePerKm=distance?revenue/distance:0,uniqueCustomers=new Set(jobs.map(j=>String(j.customerId||j.customerName||''))).size,uniqueVehicles=new Set(jobs.map(j=>String(j.vehicleId||j.vehicleReg||j.vehicleName||''))).size,from=document.getElementById('dateRangeFrom')?.value||'All dates',to=document.getElementById('dateRangeTo')?.value||'All dates';const byDate={};jobs.forEach(j=>{const d=String(j.date||'Unknown');if(!byDate[d])byDate[d]={jobs:0,revenue:0,cost:0,profit:0,distance:0};const r=byDate[d];r.jobs++;r.revenue+=Number(j.price)||0;r.cost+=Number(j.cost)||((Number(j.fuel)||0)+(Number(j.tolls)||0)+(Number(j.other)||0));r.profit+=Number(j.profit)||((Number(j.price)||0)-(Number(j.cost)||0));r.distance+=Number(j.distance)||0;});let html='<div class="card"><h3>Date Range Summary</h3><p><b>From:</b> '+escDoc(from)+' &nbsp; <b>To:</b> '+escDoc(to)+'</p><div class="grid">';html+='<div><div class="small">Jobs</div><div class="stat">'+jobs.length+'</div></div><div><div class="small">Customers</div><div class="stat">'+uniqueCustomers+'</div></div><div><div class="small">Vehicles</div><div class="stat">'+uniqueVehicles+'</div></div><div><div class="small">Distance</div><div class="stat">'+distance.toFixed(1)+' km</div></div><div><div class="small">Revenue</div><div class="stat">'+money(revenue)+'</div></div><div><div class="small">Total Costs</div><div class="stat">'+money(costs)+'</div></div><div><div class="small">Profit</div><div class="stat">'+money(profit)+'</div></div><div><div class="small">Profit Margin</div><div class="stat">'+margin.toFixed(1)+'%</div></div><div><div class="small">Fuel Used</div><div class="stat">'+litres.toFixed(2)+' L</div></div><div><div class="small">Fuel Cost</div><div class="stat">'+money(fuel)+'</div></div><div><div class="small">Tolls</div><div class="stat">'+money(tolls)+'</div></div><div><div class="small">Other Costs</div><div class="stat">'+money(other)+'</div></div><div><div class="small">Cost / km</div><div class="stat">'+money(costPerKm)+'</div></div><div><div class="small">Revenue / km</div><div class="stat">'+money(revenuePerKm)+'</div></div></div></div>';html+='<div class="card"><h3>Daily Breakdown</h3><div style="overflow-x:auto"><table><tr><th>Date</th><th>Jobs</th><th>Distance</th><th>Revenue</th><th>Costs</th><th>Profit</th><th>Margin</th></tr>';Object.keys(byDate).sort().forEach(d=>{const r=byDate[d],m=r.revenue?r.profit/r.revenue*100:0;html+='<tr><td>'+escDoc(d)+'</td><td>'+r.jobs+'</td><td>'+r.distance.toFixed(1)+' km</td><td>'+money(r.revenue)+'</td><td>'+money(r.cost)+'</td><td>'+money(r.profit)+'</td><td>'+m.toFixed(1)+'%</td></tr>';});html+='</table></div></div>';html+='<div class="card"><h3>Job Details</h3><div style="overflow-x:auto"><table><tr><th>Date</th><th>Job</th><th>Customer</th><th>Vehicle</th><th>Distance</th><th>Revenue</th><th>Costs</th><th>Profit</th><th>Margin</th></tr>';jobs.slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).forEach(j=>{const p=Number(j.profit)||((Number(j.price)||0)-(Number(j.cost)||0)),m=Number(j.margin)||((Number(j.price)||0)?p/(Number(j.price)||0)*100:0);html+='<tr><td>'+escDoc(j.date||'')+'</td><td>'+escDoc(j.reference||j.id||'')+'</td><td>'+escDoc(j.customerName||'')+'</td><td>'+escDoc((j.vehicleName||'')+(j.vehicleReg?' — '+j.vehicleReg:''))+'</td><td>'+Number(j.distance||0).toFixed(1)+' km</td><td>'+money(j.price)+'</td><td>'+money(j.cost)+'</td><td>'+money(p)+'</td><td>'+m.toFixed(1)+'%</td></tr>';});html+='</table></div></div>';el.innerHTML=html;}
+function clearDateRangeReport(){const f=document.getElementById('dateRangeFrom'),t=document.getElementById('dateRangeTo');if(f)f.value='';if(t)t.value='';const r=document.getElementById('dateRangeReportResult');if(r)r.innerHTML='';}
+function printDateRangeReport(){generateDateRangeReport();setTimeout(()=>{const x=document.getElementById('dateRangeReportResult'),w=window.open('','_blank');if(!w||!x)return;w.document.write('<!doctype html><html><head><title>Date-Range Report</title><style>body{font-family:Arial,sans-serif;margin:25px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #bbb;padding:5px;text-align:left}.stat{font-size:20px;font-weight:bold}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}</style></head><body><h1>DATE-RANGE REPORT</h1>'+x.innerHTML+'</body></html>');w.document.close();w.focus();w.print();},50);}
+</script>
+<script>
+/* Phase 3 Function 2 - Business Details & Settings */
+function getBusinessSettingsAddress(){return localStorage.getItem('tpjm_business_settings_address')||'';}
+function loadBusinessSettings(){
+  const d=getBusinessDetails();
+  const ids={name:'settingsBizName',phone:'settingsBizPhone',address:'settingsBizAddress',vat:'settingsVatRegistered',vatNo:'settingsVatNumber',rate:'settingsVatRate'};
+  const name=document.getElementById(ids.name),phone=document.getElementById(ids.phone),address=document.getElementById(ids.address),vat=document.getElementById(ids.vat),vatNo=document.getElementById(ids.vatNo),rate=document.getElementById(ids.rate);
+  if(name)name.value=d.name||'';
+  if(phone)phone.value=d.phone||'';
+  if(address)address.value=getBusinessSettingsAddress();
+  if(vat)vat.value=d.vatRegistered||'no';
+  if(vatNo)vatNo.value=d.vatNumber||'N/A';
+  if(rate)rate.value=Number(d.vatRate)||0;
+  updateBusinessSettingsVatFields();
+}
+function updateBusinessSettingsVatFields(){
+  const vat=document.getElementById('settingsVatRegistered');
+  const yes=vat&&vat.value==='yes';
+  const no=document.getElementById('settingsVatNumber'),rate=document.getElementById('settingsVatRate');
+  if(no)no.disabled=!yes;
+  if(rate)rate.disabled=!yes;
+  if(!yes){if(no)no.value='N/A';if(rate)rate.value=0;}
+}
+function saveBusinessSettings(){
+  try{
+    const current=getBusinessDetails();
+    const vat=document.getElementById('settingsVatRegistered')?.value||'no';
+    const d={name:document.getElementById('settingsBizName')?.value.trim()||'Piet & Andre Transport',phone:document.getElementById('settingsBizPhone')?.value.trim()||'',vatRegistered:vat,vatNumber:document.getElementById('settingsVatNumber')?.value.trim()||'N/A',vatRate:vat==='yes'?(Number(document.getElementById('settingsVatRate')?.value)||0):0};
+    localStorage.setItem('tpjm_business',JSON.stringify(d));
+    localStorage.setItem('tpjm_business_settings_address',document.getElementById('settingsBizAddress')?.value.trim()||'');
+    const status=document.getElementById('businessSettingsStatus');
+    if(status)status.textContent='Business details saved successfully.';
+    if(typeof loadBusinessDetails==='function')loadBusinessDetails();
+  }catch(e){const status=document.getElementById('businessSettingsStatus');if(status)status.textContent='Business details could not be saved: '+e.message;}
+}
+document.getElementById('settingsVatRegistered')?.addEventListener('change',updateBusinessSettingsVatFields);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadBusinessSettings);else loadBusinessSettings();
+</script>
+<script>
+(function(){
+  const BACKUP_KEYS=['tpjm_business','tpjm_business_settings_address','tpjm_customers','tpjm_invoices','tpjm_jobs','tpjm_license_reminder_settings','tpjm_maintenance','tpjm_pods','tpjm_quotes','tpjm_reminder_settings','tpjm_vehicles'];
+  const BACKUP_VERSION='TPJM-BACKUP-1';
+  window.createTPJMBackup=function(){
+    try{
+      const data={};
+      BACKUP_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!==null)data[k]=v;});
+      const payload={format:BACKUP_VERSION,app:'Transport Profit & Job Manager',createdAt:new Date().toISOString(),data:data};
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob),a=document.createElement('a');
+      const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+      a.href=url;a.download='transport-profit-job-manager-backup-'+stamp+'.json';
+      document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+      const el=document.getElementById('backupStatus');if(el)el.textContent='Backup created successfully. Keep the downloaded JSON file somewhere safe.';
+    }catch(e){const el=document.getElementById('backupStatus');if(el)el.textContent='Backup could not be created: '+e.message;}
+  };
+  window.restoreTPJMBackup=function(event){
+    const file=event&&event.target&&event.target.files&&event.target.files[0];
+    const status=document.getElementById('restoreStatus');
+    if(!file){if(status)status.textContent='No backup file selected.';return;}
+    const reader=new FileReader();
+    reader.onload=function(){
+      try{
+        const payload=JSON.parse(reader.result);
+        if(!payload||payload.format!==BACKUP_VERSION||payload.app!=='Transport Profit & Job Manager'||!payload.data||typeof payload.data!=='object')throw new Error('This is not a valid Transport Profit & Job Manager backup file.');
+        const allowed={};
+        BACKUP_KEYS.forEach(k=>{if(Object.prototype.hasOwnProperty.call(payload.data,k)){const v=payload.data[k];if(typeof v!=='string')throw new Error('Backup data is invalid for '+k+'.');allowed[k]=v;}});
+        if(Object.keys(allowed).length===0)throw new Error('The backup contains no recognized app data.');
+        const ok=window.confirm('Restore this backup? Your current saved app data will be replaced by the data in the backup.');
+        if(!ok){if(status)status.textContent='Restore cancelled.';return;}
+        BACKUP_KEYS.forEach(k=>localStorage.removeItem(k));
+        Object.keys(allowed).forEach(k=>localStorage.setItem(k,allowed[k]));
+        if(status)status.textContent='Backup restored successfully. Reloading the app now.';
+        setTimeout(()=>location.reload(),400);
+      }catch(e){if(status)status.textContent='Restore failed: '+e.message;}
+      event.target.value='';
+    };
+    reader.onerror=function(){if(status)status.textContent='Restore failed because the backup file could not be read.';event.target.value='';};
+    reader.readAsText(file);
+  };
+})();
+</script>
+
+<script>
+(function(){
+const DM_KEYS=[['tpjm_business','Business Details'],['tpjm_customers','Customers'],['tpjm_jobs','Jobs'],['tpjm_vehicles','Vehicles'],['tpjm_quotes','Quotes'],['tpjm_invoices','Invoices'],['tpjm_pods','POD Records'],['tpjm_maintenance','Maintenance Records']];
+function dmCount(key){const raw=localStorage.getItem(key);if(!raw)return 0;try{const value=JSON.parse(raw);return Array.isArray(value)?value.length:(value&&typeof value==='object'?1:0);}catch(e){return 0;}}
+function dmRender(){const el=document.getElementById('dataManagementCounts');if(!el)return;el.innerHTML=DM_KEYS.map(function(item){return '<div class="card"><b>'+item[1]+'</b><div style="font-size:24px;margin-top:6px">'+dmCount(item[0])+'</div></div>';}).join('');}
+window.dmDeleteType=function(key,label){if(!confirm('Delete all saved '+label+'?'))return;if(!confirm('FINAL WARNING: This will permanently delete all '+label+' from this browser. Continue?'))return;localStorage.removeItem(key);dmRender();alert(label+' deleted.');};
+window.dmResetAll=function(){if(!confirm('Reset ALL Transport Profit & Job Manager data in this browser?'))return;if(!confirm('FINAL WARNING: This permanently deletes all saved app data. Have you made a backup?'))return;const keys=[];for(let i=0;i<localStorage.length;i++)keys.push(localStorage.key(i));keys.forEach(function(k){if(k&&k.indexOf('tpjm_')===0)localStorage.removeItem(k);});dmRender();alert('All Transport Profit & Job Manager data has been reset.');};
+window.refreshDataManagement=dmRender;
+document.addEventListener('DOMContentLoaded',dmRender);
+dmRender();
+})();
+</script>
+</body>
+</html>
